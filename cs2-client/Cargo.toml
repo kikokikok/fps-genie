@@ -1,0 +1,17 @@
+[package]
+name = "cs2-client"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cs2-common = { path = "../cs2-common" }
+anyhow = "1.0"
+thiserror = "2.0"
+bytemuck = "1.23"
+
+[dev-dependencies]
+rstest = "0.26"
+mockall = "0.13"
+testcontainers = "0.25"
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"

@@ -1,0 +1,32 @@
+
+running 8 tests
+test model::tests::test_save_load ... ok
+test data::tests::test_vectors_from_demo ... ok
+test model::tests::test_predict ... ok
+test model::tests::test_forward_shape ... ok
+test data::tests::test_parquet_roundtrip ... ok
+test model::tests::test_training ... ok
+test server::tests::test_server_client_communication ... ok
+test server::tests::test_model_save_load_serve ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+
+running 9 tests
+test model::tests::test_save_load ... ok
+test data::tests::test_vectors_from_demo ... ok
+test tests::test_cli_help ... ok
+test model::tests::test_predict ... ok
+test model::tests::test_forward_shape ... ok
+test data::tests::test_parquet_roundtrip ... ok
+test model::tests::test_training ... ok
+test server::tests::test_server_client_communication ... ok
+test server::tests::test_model_save_load_serve ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

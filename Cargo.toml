@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "cs2-client",
+    "cs2-common",
+    "cs2-demo-analyzer",
+    "cs2-demo-parser",
+    "cs2-ml",
+    "csgoproto"
+]
+resolver = "2"
+
+[workspace.dependencies]
+parquet = "^54"
+arrow = "^54"
+arrow-array = "^54"
+arrow-arith = "^54"

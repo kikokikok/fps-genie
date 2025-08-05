@@ -1,0 +1,38 @@
+[package]
+name = "cs2-demo-parser"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+bitter = "0.8.0"
+prost = "0.14"
+snap = "1.1"
+ahash = "0.8"
+regex = "1.11"
+phf = "0.12"
+phf_macros = "0.12"
+derive_more = { version = "2.0", optional = true, features = ["full"] }
+itertools = "0.14"
+lazy_static = "1.5"
+bit_reverse = "0.1.8"
+memmap2 = "0.9"
+serde = { version = "1.0.219", features = ["derive"] }
+libc = "0.2.147"
+rayon = "1.10"
+proc-macro2 = "1.0.95"
+rand = "0.9"
+opus = { version = "0.3.0", optional = true}
+audiopus_sys = { version = "0.2.2", optional = true}
+bytes = "1.5.0"
+csgoproto = { path = "../csgoproto" }
+
+[profile.dev]
+overflow-checks = false
+
+[profile.release]
+debug = true
+
+[features]
+# default = ["voice"]
+voice = ["opus", "audiopus_sys"]

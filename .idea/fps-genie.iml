@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="EMPTY_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/cs2-client/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-common/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-demo-analyzer/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-demo-analyzer/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-ml/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/csgoproto/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-demo-parser/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
