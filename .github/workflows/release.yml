@@ -1,0 +1,147 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  build-release:
+    name: Build Release
+    needs: create-release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_name: cs2-tools-linux
+            asset_name: cs2-tools-linux-x86_64.tar.gz
+          - os: windows-latest
+            artifact_name: cs2-tools-windows
+            asset_name: cs2-tools-windows-x86_64.zip
+          - os: macos-latest
+            artifact_name: cs2-tools-macos
+            asset_name: cs2-tools-macos-x86_64.tar.gz
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install system dependencies (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Install system dependencies (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install openssl pkg-config
+
+      - name: Build release binaries
+        run: cargo build --workspace --release
+
+      - name: Package binaries (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          mkdir -p release
+          cp target/release/cs2-analytics release/
+          cp target/release/cs2-data-pipeline release/
+          cp target/release/cs2-demo-analyzer release/
+          cp target/release/cs2-ml release/
+          cp target/release/csgoproto release/
+          cp README.md LICENSE* release/ 2>/dev/null || true
+          tar -czf ${{ matrix.asset_name }} -C release .
+
+      - name: Package binaries (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir release
+          cp target/release/cs2-analytics.exe release/
+          cp target/release/cs2-data-pipeline.exe release/
+          cp target/release/cs2-demo-analyzer.exe release/
+          cp target/release/cs2-ml.exe release/
+          cp target/release/csgoproto.exe release/
+          cp README.md release/ 2>$null || echo "README.md not found"
+          Compress-Archive -Path release/* -DestinationPath ${{ matrix.asset_name }}
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.asset_name }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/octet-stream
+
+  publish-docker:
+    name: Publish Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cs2-tools:${{ steps.version.outputs.VERSION }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/cs2-tools:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
