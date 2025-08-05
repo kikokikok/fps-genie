@@ -1,0 +1,51 @@
+[package]
+name = "cs2-data-pipeline"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cs2-common = { path = "../cs2-common" }
+cs2-demo-parser = { path = "../cs2-demo-parser" }
+
+# Database and ORM
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid", "json"] }
+tokio = { version = "1.0", features = ["full"] }
+
+# Vector database
+qdrant-client = { version = "1.7", features = ["serde"] }
+
+# Data processing
+arrow = "54.0"
+parquet = "54.0"
+polars = { version = "0.37", features = ["lazy", "parquet", "sql"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# CLI with env support
+clap = { version = "4.0", features = ["derive", "env"] }
+
+# Error handling and logging
+anyhow = "1.0"
+thiserror = "2.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Utilities
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+ahash = "0.8"
+
+# File system utilities
+glob = "0.3"
+walkdir = "2.5"
+
+# Async utilities
+futures = "0.3"
+
+[dev-dependencies]
+tempfile = "3.0"
+tokio-test = "0.4"
+uuid = { version = "1.0", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }

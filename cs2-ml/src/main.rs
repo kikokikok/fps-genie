@@ -50,7 +50,7 @@ fn main() -> anyhow::Result<()> {
                 println!("Wrote {}", out.display());
             }
         }
-        Commands::Train { parquet, model_out, epochs } => {
+        Commands::Train { parquet, model_out, epochs: _ } => {
             use parquet::file::reader::SerializedFileReader;
             use parquet::record::reader::RowIter;
             use parquet::record::RowAccessor;
@@ -69,13 +69,15 @@ fn main() -> anyhow::Result<()> {
                 ];
                 dataset.push((vec, label));
             }
-            let vs = tch::nn::VarStore::new(tch::Device::Cpu);
-            model::BehaviorNet::train(&vs.root(), dataset, epochs, 0.001)?;
-            vs.save(&model_out)?;
+            // Use Candle instead of PyTorch
+            use candle_core::Device;
+            let mut net = model::BehaviorNet::new(12, 2, Device::Cpu)?;
+            net.train(&dataset)?;
+            net.save(model_out.to_str().unwrap())?;
             println!("Model saved to {}", model_out.display());
         }
-        Commands::Serve { model, port } => {
-            server::serve(model.to_str().unwrap(), port)?;
+        Commands::Serve { model: _, port } => {
+            server::serve(port)?;
         }
     }
     Ok(())

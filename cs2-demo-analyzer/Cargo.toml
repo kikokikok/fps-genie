@@ -16,6 +16,6 @@ tracing-subscriber = "0.3"
 [dev-dependencies]
 tempfile = "3.8"
 rstest = "0.26"
-testcontainers = "0.25"
+testcontainers = "0.20"
 assert_cmd = "2.0"
 predicates = "3.0"

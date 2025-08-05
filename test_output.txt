@@ -1,0 +1,517 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /Users/christian.klat/dev/git/fps-genie/cs2-demo-parser/Cargo.toml
+workspace: /Users/christian.klat/dev/git/fps-genie/Cargo.toml
+    Blocking waiting for file lock on build directory
+warning: unreachable pattern
+   --> cs2-demo-parser/src/second_pass/variants.rs:465:13
+    |
+465 |             _ => {}
+    |             ^ no value can reach this
+    |
+note: multiple earlier patterns match some of the same values
+   --> cs2-demo-parser/src/second_pass/variants.rs:465:13
+    |
+412 |             Some(Variant::F32(p)) => match self {
+    |             --------------------- matches some of the same values
+...
+416 |             Some(Variant::I32(p)) => match self {
+    |             --------------------- matches some of the same values
+...
+420 |             Some(Variant::String(p)) => match self {
+    |             ------------------------ matches some of the same values
+...
+424 |             Some(Variant::U32(p)) => match self {
+    |             --------------------- matches some of the same values
+...
+465 |             _ => {}
+    |             ^ ...and 10 other patterns collectively make this unreachable
+    = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: methods `second_pass_threaded_with_channels` and `second_pass_multi_threaded_no_channels` are never used
+   --> cs2-demo-parser/src/parse_demo.rs:114:8
+    |
+54  | impl<'a> Parser<'a> {
+    | ------------------- methods in this implementation
+...
+114 |     fn second_pass_threaded_with_channels(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+169 |     fn second_pass_multi_threaded_no_channels(&self, outer_bytes: &[u8], first_pass_output: FirstPassOutput) -> Result<DemoOutput, DemoParserError> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `cs2-demo-parser` (lib) generated 2 warnings
+   Compiling rstest_macros v0.26.1
+warning: unused variable: `round_events`
+   --> cs2-data-pipeline/src/pipeline.rs:250:13
+    |
+250 |         let round_events: std::collections::HashMap<u32, bool> = demo_output.game_events
+    |             ^^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_round_events`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: variable does not need to be mutable
+   --> cs2-data-pipeline/src/pipeline.rs:258:13
+    |
+258 |         let mut current_round = 1;
+    |             ----^^^^^^^^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: associated function `extract_player_snapshots_from_tick` is never used
+   --> cs2-data-pipeline/src/pipeline.rs:289:8
+    |
+46  | impl DemoProcessor {
+    | ------------------ associated function in this implementation
+...
+289 |     fn extract_player_snapshots_from_tick(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: unused imports: `FileReader` and `SerializedFileReader`
+  --> cs2-ml/src/data.rs:18:29
+   |
+18 | use parquet::file::reader::{SerializedFileReader, FileReader};
+   |                             ^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::fs::File`
+  --> cs2-ml/src/data.rs:19:5
+   |
+19 | use std::fs::File;
+   |     ^^^^^^^^^^^^^
+
+warning: unused import: `parquet::record::RowAccessor`
+  --> cs2-ml/src/data.rs:20:5
+   |
+20 | use parquet::record::RowAccessor;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `cs2-data-pipeline` (lib) generated 3 warnings (run `cargo fix --lib -p cs2-data-pipeline` to apply 1 suggestion)
+warning: `cs2-ml` (lib) generated 3 warnings (run `cargo fix --lib -p cs2-ml` to apply 3 suggestions)
+   Compiling doc-comment v0.3.3
+   Compiling mockall_derive v0.13.1
+   Compiling cs2-integration-tests v0.1.0 (/Users/christian.klat/dev/git/fps-genie/cs2-integration-tests)
+warning: unused variable: `config_path`
+  --> cs2-analytics/src/training.rs:24:9
+   |
+24 |         config_path: Option<PathBuf>,
+   |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_config_path`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `pro_players`
+  --> cs2-analytics/src/analysis.rs:41:9
+   |
+41 |         pro_players: Option<String>,
+   |         ^^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_pro_players`
+
+warning: unused variable: `matches`
+  --> cs2-analytics/src/analysis.rs:73:41
+   |
+73 |     async fn analyze_positioning(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_matches`
+
+warning: unused variable: `players`
+  --> cs2-analytics/src/analysis.rs:73:66
+   |
+73 |     async fn analyze_positioning(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                                                  ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_players`
+
+warning: unused variable: `matches`
+  --> cs2-analytics/src/analysis.rs:85:37
+   |
+85 |     async fn analyze_economy(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                     ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_matches`
+
+warning: unused variable: `players`
+  --> cs2-analytics/src/analysis.rs:85:62
+   |
+85 |     async fn analyze_economy(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                                              ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_players`
+
+warning: unused variable: `matches`
+  --> cs2-analytics/src/analysis.rs:97:48
+   |
+97 |     async fn analyze_clutch_performance(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_matches`
+
+warning: unused variable: `players`
+  --> cs2-analytics/src/analysis.rs:97:73
+   |
+97 |     async fn analyze_clutch_performance(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+   |                                                                         ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_players`
+
+warning: unused variable: `input_path`
+  --> cs2-analytics/src/visualization.rs:47:47
+   |
+47 |     async fn generate_trajectory_plots(&self, input_path: &PathBuf) -> Result<()> {
+   |                                               ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_input_path`
+
+warning: unused variable: `input_path`
+  --> cs2-analytics/src/visualization.rs:63:48
+   |
+63 |     async fn generate_performance_radar(&self, input_path: &PathBuf) -> Result<()> {
+   |                                                ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_input_path`
+
+warning: unused variable: `input_path`
+  --> cs2-analytics/src/visualization.rs:79:48
+   |
+79 |     async fn generate_timeline_analysis(&self, input_path: &PathBuf) -> Result<()> {
+   |                                                ^^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_input_path`
+
+warning: fields `database_url` and `qdrant_url` are never read
+ --> cs2-analytics/src/training.rs:7:5
+  |
+6 | pub struct TrainingPipeline {
+  |            ---------------- fields in this struct
+7 |     database_url: String,
+  |     ^^^^^^^^^^^^
+8 |     qdrant_url: String,
+  |     ^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` on by default
+
+warning: fields `batch_size`, `learning_rate`, `model_architecture`, and `data_augmentation` are never read
+  --> cs2-analytics/src/training.rs:80:9
+   |
+79 | pub struct TrainingConfig {
+   |            -------------- fields in this struct
+80 |     pub batch_size: usize,
+   |         ^^^^^^^^^^
+81 |     pub learning_rate: f64,
+   |         ^^^^^^^^^^^^^
+82 |     pub model_architecture: ModelArchitecture,
+   |         ^^^^^^^^^^^^^^^^^^
+83 |     pub data_augmentation: bool,
+   |         ^^^^^^^^^^^^^^^^^
+
+warning: fields `hidden_layers`, `dropout_rate`, and `activation` are never read
+  --> cs2-analytics/src/training.rs:88:9
+   |
+87 | pub struct ModelArchitecture {
+   |            ----------------- fields in this struct
+88 |     pub hidden_layers: Vec<usize>,
+   |         ^^^^^^^^^^^^^
+89 |     pub dropout_rate: f64,
+   |         ^^^^^^^^^^^^
+90 |     pub activation: String,
+   |         ^^^^^^^^^^
+
+warning: fields `database_url` and `qdrant_url` are never read
+ --> cs2-analytics/src/analysis.rs:6:5
+  |
+5 | pub struct AdvancedAnalytics {
+  |            ----------------- fields in this struct
+6 |     database_url: String,
+  |     ^^^^^^^^^^^^
+7 |     qdrant_url: String,
+  |     ^^^^^^^^^^
+
+warning: struct `AdvancedModels` is never constructed
+ --> cs2-analytics/src/models.rs:2:12
+  |
+2 | pub struct AdvancedModels;
+  |            ^^^^^^^^^^^^^^
+
+warning: associated functions `behavior_cloning_model` and `crosshair_model` are never used
+  --> cs2-analytics/src/models.rs:6:12
+   |
+4  | impl AdvancedModels {
+   | ------------------- associated functions in this implementation
+5  |     /// Behavior cloning model for professional player actions
+6  |     pub fn behavior_cloning_model() -> BehaviorCloningConfig {
+   |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+16 |     pub fn crosshair_model() -> CrosshairConfig {
+   |            ^^^^^^^^^^^^^^^
+
+warning: fields `sequence_length`, `hidden_size`, `num_layers`, and `dropout` are never read
+  --> cs2-analytics/src/models.rs:27:9
+   |
+26 | pub struct BehaviorCloningConfig {
+   |            --------------------- fields in this struct
+27 |     pub sequence_length: usize,
+   |         ^^^^^^^^^^^^^^^
+28 |     pub hidden_size: usize,
+   |         ^^^^^^^^^^^
+29 |     pub num_layers: usize,
+   |         ^^^^^^^^^^
+30 |     pub dropout: f32,
+   |         ^^^^^^^
+
+warning: fields `input_features`, `hidden_layers`, and `output_features` are never read
+  --> cs2-analytics/src/models.rs:35:9
+   |
+34 | pub struct CrosshairConfig {
+   |            --------------- fields in this struct
+35 |     pub input_features: usize,
+   |         ^^^^^^^^^^^^^^
+36 |     pub hidden_layers: Vec<usize>,
+   |         ^^^^^^^^^^^^^
+37 |     pub output_features: usize,
+   |         ^^^^^^^^^^^^^^^
+
+   Compiling cs2-data-pipeline v0.1.0 (/Users/christian.klat/dev/git/fps-genie/cs2-data-pipeline)
+warning: `cs2-analytics` (bin "cs2-analytics" test) generated 19 warnings
+warning: unused imports: `PostgresManager`, `TimescaleManager`, and `VectorManager`
+ --> cs2-data-pipeline/tests/database_tests.rs:4:52
+  |
+4 | use cs2_data_pipeline::database::{DatabaseManager, PostgresManager, TimescaleManager, VectorManager};
+  |                                                    ^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `tokio_test`
+  --> cs2-data-pipeline/tests/database_tests.rs:12:9
+   |
+12 |     use tokio_test;
+   |         ^^^^^^^^^^
+
+warning: `cs2-data-pipeline` (test "database_tests") generated 2 warnings (run `cargo fix --test "database_tests"` to apply 2 suggestions)
+warning: `cs2-data-pipeline` (lib test) generated 3 warnings (3 duplicates)
+   Compiling cs2-demo-parser v0.1.0 (/Users/christian.klat/dev/git/fps-genie/cs2-demo-parser)
+   Compiling csgoproto v0.1.5 (/Users/christian.klat/dev/git/fps-genie/csgoproto)
+   Compiling assert_cmd v2.0.17
+warning: unused import: `anyhow::Result`
+ --> cs2-integration-tests/src/e2e_tests.rs:1:5
+  |
+1 | use anyhow::Result;
+  |     ^^^^^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `std::time::Duration`
+ --> cs2-integration-tests/src/e2e_tests.rs:2:5
+  |
+2 | use std::time::Duration;
+  |     ^^^^^^^^^^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `tokio::time::timeout`
+ --> cs2-integration-tests/src/e2e_tests.rs:3:5
+  |
+3 | use tokio::time::timeout;
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `info` and `warn`
+ --> cs2-integration-tests/src/e2e_tests.rs:4:15
+  |
+4 | use tracing::{info, warn};
+  |               ^^^^  ^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `uuid::Uuid`
+ --> cs2-integration-tests/src/e2e_tests.rs:5:5
+  |
+5 | use uuid::Uuid;
+  |     ^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `TestDataFactory` and `TestInfrastructure`
+ --> cs2-integration-tests/src/e2e_tests.rs:7:34
+  |
+7 | use crate::test_infrastructure::{TestInfrastructure, TestDataFactory};
+  |                                  ^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `ProcessingStatus`
+ --> cs2-integration-tests/src/e2e_tests.rs:8:25
+  |
+8 | use cs2_data_pipeline::{ProcessingStatus};
+  |                         ^^^^^^^^^^^^^^^^
+  |
+help: if this is a test module, consider adding a `#[cfg(test)]` to the containing module
+ --> cs2-integration-tests/src/lib.rs:2:1
+  |
+2 | pub mod e2e_tests;
+  | ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `uuid::Uuid`
+ --> cs2-data-pipeline/tests/pipeline_tests.rs:5:5
+  |
+5 | use uuid::Uuid;
+  |     ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `chrono::Utc`
+ --> cs2-data-pipeline/tests/pipeline_tests.rs:6:5
+  |
+6 | use chrono::Utc;
+  |     ^^^^^^^^^^^
+
+warning: unused import: `Match`
+  --> cs2-data-pipeline/tests/pipeline_tests.rs:10:33
+   |
+10 | use cs2_data_pipeline::models::{Match, ProcessingStatus};
+   |                                 ^^^^^
+
+error[E0369]: binary operation `==` cannot be applied to type `cs2_data_pipeline::ProcessingStatus`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:109:9
+    |
+109 |         assert_eq!(registered_match.processing_status, ProcessingStatus::Pending);
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         cs2_data_pipeline::ProcessingStatus
+    |         cs2_data_pipeline::ProcessingStatus
+    |
+note: the foreign item type `cs2_data_pipeline::ProcessingStatus` doesn't implement `PartialEq`
+   --> /Users/christian.klat/dev/git/fps-genie/cs2-data-pipeline/src/models.rs:28:1
+    |
+28  | pub enum ProcessingStatus {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^ not implement `PartialEq`
+    = note: this error originates in the macro `assert_eq` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: `cs2-integration-tests` (lib) generated 7 warnings (run `cargo fix --lib -p cs2-integration-tests` to apply 7 suggestions)
+warning: unused variable: `temp_dir`
+  --> cs2-data-pipeline/tests/pipeline_tests.rs:68:14
+   |
+68 |         let (temp_dir, config, db) = setup_test_environment().await?;
+   |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+   |
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: unused import: `anyhow::Result`
+ --> cs2-integration-tests/src/e2e_tests.rs:1:5
+  |
+1 | use anyhow::Result;
+  |     ^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `uuid::Uuid`
+ --> cs2-integration-tests/src/e2e_tests.rs:5:5
+  |
+5 | use uuid::Uuid;
+  |     ^^^^^^^^^^
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:118:14
+    |
+118 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+warning: unused variable: `match_id`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:124:13
+    |
+124 |         let match_id = processor.register_demo(&demo_path).await?;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_match_id`
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:143:14
+    |
+143 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:194:14
+    |
+194 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+warning: unused variable: `match_id`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:199:13
+    |
+199 |         let match_id = processor.register_demo(&demo_path).await?;
+    |             ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_match_id`
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:221:14
+    |
+221 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:246:14
+    |
+246 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+warning: unused variable: `temp_dir`
+   --> cs2-data-pipeline/tests/pipeline_tests.rs:261:14
+    |
+261 |         let (temp_dir, config, db) = setup_test_environment().await?;
+    |              ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_temp_dir`
+
+For more information about this error, try `rustc --explain E0369`.
+warning: `cs2-data-pipeline` (test "pipeline_tests") generated 12 warnings
+error: could not compile `cs2-data-pipeline` (test "pipeline_tests") due to 1 previous error; 12 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+error[E0369]: binary operation `==` cannot be applied to type `cs2_data_pipeline::ProcessingStatus`
+  --> cs2-integration-tests/src/e2e_tests.rs:37:13
+   |
+37 |             assert_eq!(unprocessed[0].processing_status, ProcessingStatus::Pending);
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |             |
+   |             cs2_data_pipeline::ProcessingStatus
+   |             cs2_data_pipeline::ProcessingStatus
+   |
+note: the foreign item type `cs2_data_pipeline::ProcessingStatus` doesn't implement `PartialEq`
+  --> /Users/christian.klat/dev/git/fps-genie/cs2-data-pipeline/src/models.rs:28:1
+   |
+28 | pub enum ProcessingStatus {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^ not implement `PartialEq`
+   = note: this error originates in the macro `assert_eq` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused variable: `infra`
+   --> cs2-integration-tests/src/e2e_tests.rs:108:13
+    |
+108 |         let infra = TestInfrastructure::new().await.unwrap();
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_infra`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: `cs2-integration-tests` (lib test) generated 3 warnings
+error: could not compile `cs2-integration-tests` (lib test) due to 1 previous error; 3 warnings emitted
+warning: methods `second_pass_threaded_with_channels` and `second_pass_multi_threaded_no_channels` are never used
+   --> cs2-demo-parser/src/parse_demo.rs:114:8
+    |
+54  | impl<'a> Parser<'a> {
+    | ------------------- methods in this implementation
+...
+114 |     fn second_pass_threaded_with_channels(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+169 |     fn second_pass_multi_threaded_no_channels(&self, outer_bytes: &[u8], first_pass_output: FirstPassOutput) -> Result<DemoOutput, DemoPa...
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `cs2-demo-parser` (lib test) generated 2 warnings (1 duplicate)

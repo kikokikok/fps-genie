@@ -12,6 +12,6 @@ bytemuck = "1.23"
 [dev-dependencies]
 rstest = "0.26"
 mockall = "0.13"
-testcontainers = "0.25"
+testcontainers = "0.20"
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"

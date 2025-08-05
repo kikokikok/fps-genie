@@ -5,6 +5,9 @@ members = [
     "cs2-demo-analyzer",
     "cs2-demo-parser",
     "cs2-ml",
+    "cs2-data-pipeline",
+    "cs2-integration-tests",
+    "cs2-analytics",
     "csgoproto"
 ]
 resolver = "2"
@@ -14,3 +17,8 @@ parquet = "^54"
 arrow = "^54"
 arrow-array = "^54"
 arrow-arith = "^54"
+rand = "0.9"
+rand_core = "0.9"
+rand_chacha = "0.9"
+rand_distr = "0.5"
+getrandom = "0.3"

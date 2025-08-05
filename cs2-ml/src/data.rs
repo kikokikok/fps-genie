@@ -1,20 +1,20 @@
 use cs2_demo_parser::parse_demo::{Parser as DemoParser, ParsingMode, DemoOutput};
 use cs2_demo_parser::first_pass::parser_settings::ParserInputs;
 use cs2_demo_parser::second_pass::variants::PropColumn;
-use arrow::datatypes::{DataType, Field, Schema};
-use arrow::array::{Float32Array, UInt32Array, UInt64Array, ArrayRef};
-use std::sync::Arc;
-use arrow::record_batch::RecordBatch;
-use std::path::Path;
-use anyhow::Result;
 use cs2_common::BehavioralVector;
+use anyhow::Result;
+use std::path::Path;
+
+use arrow::array::{ArrayRef, Float32Array, UInt32Array, UInt64Array};
+use arrow::datatypes::{DataType, Field, Schema};
+use arrow::record_batch::RecordBatch;
+use std::sync::Arc;
+
+use ahash::AHashMap;
 use parquet::file::properties::WriterProperties;
 use crate::player::PlayerMeta;
-use ahash::AHashMap;
+use parquet::arrow::ArrowWriter;
 use std::collections::HashMap;
-use parquet::file::reader::{SerializedFileReader, FileReader};
-use std::fs::File;
-use parquet::record::RowAccessor;
 
 pub fn vectors_from_demo(path: impl AsRef<Path>) -> Result<Vec<BehavioralVector>> {
     let bytes = std::fs::read(path)?;
@@ -193,7 +193,7 @@ pub fn write_to_parquet(vecs: &[BehavioralVector], path: impl AsRef<Path>) -> Re
 
     // Fix the writer initialization to provide the WriterProperties correctly
     let props = WriterProperties::builder().build();
-    let mut writer = parquet::arrow::ArrowWriter::try_new(
+    let mut writer = ArrowWriter::try_new(
         file,
         Arc::new(schema),
         Some(props)  // Don't wrap in Arc, as try_new expects WriterProperties directly
@@ -226,7 +226,7 @@ mod tests {
     fn test_vectors_from_demo() {
         // Use the actual test demo file from the test_data directory
         let demo_file_path = "../../test_data/test_demo.dem";
-        
+
         // Check if the file exists, if not skip the test
         if !std::path::Path::new(demo_file_path).exists() {
             eprintln!("Warning: test_demo.dem not found, skipping test");

@@ -1,4 +1,4 @@
-use crate::first_pass::frameparser::{FrameParser, StartEndOffset, StartEndType};
+use crate::first_pass::frameparser::{StartEndOffset, StartEndType};
 use crate::first_pass::parser::FirstPassOutput;
 use crate::first_pass::parser_settings::check_multithreadability;
 use crate::first_pass::parser_settings::{FirstPassParser, ParserInputs};
@@ -16,7 +16,7 @@ use csgoproto::CsvcMsgVoiceData;
 use itertools::Itertools;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::prelude::ParallelIterator;
-use std::sync::mpsc::{channel, Receiver};
+use std::sync::mpsc::Receiver;
 use std::thread;
 use std::time::Duration;
 
