@@ -9,6 +9,11 @@
       <sourceFolder url="file://$MODULE_DIR$/cs2-ml/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/csgoproto/src" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cs2-demo-parser/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-analytics/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-data-pipeline/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-data-pipeline/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-integration-tests/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/cs2-integration-tests/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

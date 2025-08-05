@@ -3,6 +3,5 @@
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/csgoproto/GameTracking-CS2" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/temp_demoparser" vcs="Git" />
   </component>
 </project>
