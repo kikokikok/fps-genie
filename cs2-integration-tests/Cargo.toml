@@ -40,3 +40,7 @@ harness = false
 [[bench]]
 name = "standalone_performance"
 harness = false
+
+[[bench]]
+name = "real_demo_performance"
+harness = false
