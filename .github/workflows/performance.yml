@@ -19,22 +19,62 @@ on:
         required: false
         default: '60'
         type: string
+  schedule:
+    - cron: '0 2 * * 0'  # Weekly performance regression check
 
 env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  performance-test:
-    name: Performance Testing
+  build-test-image:
+    name: Build Test Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build performance test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: test
+          load: true
+          tags: local/fps-genie-perf:latest
+          cache-from: type=gha
+
+      - name: Output image
+        id: image
+        run: echo "image=local/fps-genie-perf:latest" >> $GITHUB_OUTPUT
+
+  performance-test:
+    name: Run Performance Tests
+    runs-on: ubuntu-latest
+    needs: build-test-image
     services:
       postgres:
         image: timescale/timescaledb:latest-pg15
         env:
           POSTGRES_PASSWORD: cs2_password
           POSTGRES_USER: cs2_user
-          POSTGRES_DB: cs2_analysis_test
+          POSTGRES_DB: cs2_analysis_perf
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -48,196 +88,40 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
-          --health-timeout 5s
+          --health-timeout 3s
           --health-retries 5
         ports:
           - 6379:6379
 
-      qdrant:
-        image: qdrant/qdrant:latest
-        ports:
-          - 6333:6333
-          - 6334:6334
-
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            .
-            csgoproto
-
-      - name: Install system dependencies
+      - name: Run performance benchmarks
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          docker run --rm \
+            --network ${{ job.services.postgres.network }} \
+            -e DATABASE_URL="postgresql://cs2_user:cs2_password@postgres:5432/cs2_analysis_perf" \
+            -e REDIS_URL="redis://redis:6379" \
+            -e BENCHMARK_TYPE="${{ github.event.inputs.benchmark_type || 'all' }}" \
+            -e BENCHMARK_DURATION="${{ github.event.inputs.duration || '60' }}" \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ needs.build-test-image.outputs.image }} \
+            bash -c "
+              echo 'Running performance benchmarks...'
+              cargo bench --workspace
+              echo 'Performance tests completed'
+            "
 
-      - name: Setup databases
-        run: |
-          # Wait for PostgreSQL to be ready
-          while ! pg_isready -h localhost -p 5432 -U cs2_user; do
-            echo "Waiting for PostgreSQL..."
-            sleep 1
-          done
-          
-          # Create test database and extensions
-          PGPASSWORD=cs2_password psql -h localhost -U cs2_user -d cs2_analysis_test -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
-          
-          # Wait for Qdrant to be ready
-          timeout 30s bash -c 'until curl -f http://localhost:6334/health; do sleep 1; done'
-        env:
-          PGPASSWORD: cs2_password
-
-      - name: Run specific benchmark
-        run: |
-          case "${{ github.event.inputs.benchmark_type }}" in
-            "database")
-              cargo bench --package cs2-integration-tests benchmark_database_operations
-              ;;
-            "pipeline")
-              cargo bench --package cs2-integration-tests benchmark_pipeline_processing
-              ;;
-            "ml")
-              cargo bench --package cs2-integration-tests benchmark_ml_processing
-              ;;
-            "concurrent")
-              cargo bench --package cs2-integration-tests benchmark_concurrent_operations
-              ;;
-            *)
-              cargo bench --package cs2-integration-tests
-              ;;
-          esac
-        env:
-          DATABASE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
-          TIMESCALE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
-          REDIS_URL: redis://localhost:6379
-          QDRANT_URL: http://localhost:6334
-          BENCHMARK_DURATION: ${{ github.event.inputs.duration }}
-
-      - name: Generate performance report
-        run: |
-          echo "# Performance Test Report" > performance_report.md
-          echo "Date: $(date)" >> performance_report.md
-          echo "Benchmark Type: ${{ github.event.inputs.benchmark_type }}" >> performance_report.md
-          echo "Duration: ${{ github.event.inputs.duration }}s" >> performance_report.md
-          echo "" >> performance_report.md
-          
-          if [ -d "target/criterion" ]; then
-            echo "## Benchmark Results" >> performance_report.md
-            find target/criterion -name "report.json" -exec basename {} \; | while read report; do
-              echo "- $(basename $(dirname $report))" >> performance_report.md
-            done
-          fi
-
-      - name: Upload performance results
+      - name: Upload benchmark results
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: performance-results-${{ github.event.inputs.benchmark_type }}-${{ github.run_number }}
+          name: benchmark-results
           path: |
             target/criterion/
-            performance_report.md
-          retention-days: 90
-
-      - name: Comment on commit
-        if: github.event_name == 'push'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            if (fs.existsSync('performance_report.md')) {
-              const report = fs.readFileSync('performance_report.md', 'utf8');
-              github.rest.repos.createCommitComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                commit_sha: context.sha,
-                body: `## Performance Test Results\n\n${report}`
-              });
-            }
-
-  load-test:
-    name: Load Testing
-    runs-on: ubuntu-latest
-    if: github.event.inputs.benchmark_type == 'all' || github.event.inputs.benchmark_type == 'concurrent'
-    services:
-      postgres:
-        image: timescale/timescaledb:latest-pg15
-        env:
-          POSTGRES_PASSWORD: cs2_password
-          POSTGRES_USER: cs2_user
-          POSTGRES_DB: cs2_analysis_test
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
-      qdrant:
-        image: qdrant/qdrant:latest
-        ports:
-          - 6333:6333
-          - 6334:6334
-
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
-
-      - name: Setup databases
-        run: |
-          while ! pg_isready -h localhost -p 5432 -U cs2_user; do
-            echo "Waiting for PostgreSQL..."
-            sleep 1
-          done
-          PGPASSWORD=cs2_password psql -h localhost -U cs2_user -d cs2_analysis_test -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
-        env:
-          PGPASSWORD: cs2_password
-
-      - name: Run load tests
-        run: |
-          # Build release version for accurate performance measurements
-          cargo build --release --package cs2-integration-tests
-          
-          # Run high-concurrency benchmarks
-          RUST_LOG=info cargo test --release --package cs2-integration-tests test_concurrent_processing -- --nocapture
-        env:
-          DATABASE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
-          TIMESCALE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
-          QDRANT_URL: http://localhost:6334
-
-      - name: Generate load test report
-        run: |
-          echo "# Load Test Report" > load_test_report.md
-          echo "Date: $(date)" >> load_test_report.md
-          echo "Concurrent connections tested: 1, 2, 4, 8, 16" >> load_test_report.md
-          echo "" >> load_test_report.md
-          echo "See artifacts for detailed results" >> load_test_report.md
-
-      - name: Upload load test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: load-test-results-${{ github.run_number }}
-          path: |
-            load_test_report.md
-          retention-days: 90
+            **/*.json
+            **/*.html

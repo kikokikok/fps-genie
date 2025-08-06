@@ -9,11 +9,11 @@ cs2-demo-parser = { path = "../cs2-demo-parser" }
 cs2-ml = { path = "../cs2-ml" }
 cs2-data-pipeline = { path = "../cs2-data-pipeline" }
 
-# Advanced ML and Analytics - using only Candle to avoid conflicts
+# Advanced ML and Analytics - using CPU-only Candle for Linux compatibility
 tokio = { version = "1.0", features = ["full"] }
-candle-core = { version = "0.9", features = ["metal"] }
-candle-nn = { version = "0.9", features = ["metal"] }
-candle-transformers = { version = "0.9", features = ["metal"] }
+candle-core = { version = "0.9", features = ["default"] }
+candle-nn = { version = "0.9", features = ["default"] }
+candle-transformers = { version = "0.9", features = ["default"] }
 
 # Data processing
 polars = { version = "0.37", features = ["lazy", "parquet", "sql"] }
@@ -34,7 +34,7 @@ anyhow = "1.0"
 
 # Configuration and CLI
 serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4.0", features = ["derive", "env"] }
+clap = { version = "4.0", features = ["derive"] }
 config = "0.15"
 tracing = "0.1"
 tracing-subscriber = "0.3"

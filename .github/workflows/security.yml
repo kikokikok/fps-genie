@@ -8,38 +8,128 @@ on:
   schedule:
     - cron: '0 2 * * 1' # Weekly on Mondays
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
-  security-audit:
-    name: Security Audit
+  build-security-image:
+    name: Build Security Scan Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image: ${{ steps.image.outputs.image }}
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Build security scan image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: development
+          load: true
+          tags: local/fps-genie-security:latest
+          cache-from: type=gha
+
+      - name: Output image
+        id: image
+        run: echo "image=local/fps-genie-security:latest" >> $GITHUB_OUTPUT
+
+  security-audit:
+    name: Cargo Security Audit
+    runs-on: ubuntu-latest
+    needs: build-security-image
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Run cargo audit
-        run: cargo audit
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ needs.build-security-image.outputs.image }} \
+            cargo audit --deny warnings
 
   dependency-check:
-    name: Dependency Check
+    name: Dependency Vulnerability Check
     runs-on: ubuntu-latest
+    needs: build-security-image
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Generate dependency tree
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ needs.build-security-image.outputs.image }} \
+            bash -c "cargo tree --format '{p} {f}' > dependency-tree.txt"
 
-      - name: Install cargo-deny
-        run: cargo install cargo-deny
+      - name: Upload dependency tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-tree
+          path: dependency-tree.txt
 
-      - name: Run cargo deny
-        run: cargo deny check
+  container-security:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    needs: build-security-image
+    steps:
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ needs.build-security-image.outputs.image }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  license-check:
+    name: License Compliance Check
+    runs-on: ubuntu-latest
+    needs: build-security-image
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Check license compatibility
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            ${{ needs.build-security-image.outputs.image }} \
+            bash -c "
+              echo 'Checking license compatibility...'
+              cargo tree --format '{p} {l}' | grep -v '(?)' | sort | uniq > licenses.txt
+              echo 'License report generated'
+            "
+
+      - name: Upload license report
+        uses: actions/upload-artifact@v4
+        with:
+          name: license-report
+          path: licenses.txt
 
   codeql:
     name: CodeQL Analysis
