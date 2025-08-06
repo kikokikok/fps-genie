@@ -257,7 +257,28 @@ jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    services:
+      postgres:
+        image: timescale/timescaledb:latest-pg15
+        env:
+          POSTGRES_PASSWORD: cs2_password
+          POSTGRES_USER: cs2_user
+          POSTGRES_DB: cs2_analysis_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports:
+          - 6333:6333
+          - 6334:6334
+
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -269,15 +290,56 @@ jobs:
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            .
+            csgoproto
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Setup database
+        run: |
+          # Wait for PostgreSQL to be ready
+          while ! pg_isready -h localhost -p 5432 -U cs2_user; do
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+          
+          # Create test database and extensions
+          PGPASSWORD=cs2_password psql -h localhost -U cs2_user -d cs2_analysis_test -c "CREATE EXTENSION IF NOT EXISTS timescaledb;"
+        env:
+          PGPASSWORD: cs2_password
 
       - name: Run benchmarks
-        run: cargo bench --workspace
+        run: cargo bench --workspace --message-format=json | tee benchmark_output.json
+        env:
+          DATABASE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
+          TIMESCALE_URL: postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis_test
+          QDRANT_URL: http://localhost:6334
+
+      - name: Store benchmark results
+        uses: benchmark-action/github-action-benchmark@v1
+        with:
+          name: Rust Benchmark
+          tool: 'cargo'
+          output-file-path: benchmark_output.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          comment-on-alert: true
+          alert-threshold: '200%'
+          fail-on-alert: true
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
         with:
           name: benchmark-results
-          path: target/criterion/
+          path: |
+            target/criterion/
+            benchmark_output.json
+          retention-days: 30
 
   coverage:
     name: Code Coverage
