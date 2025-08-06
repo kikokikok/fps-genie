@@ -45,7 +45,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,enable=true,priority=100,prefix={{date 'YYYYMMDD'}}-,suffix=,format=short
 
       - name: Build and push test image
         id: build
