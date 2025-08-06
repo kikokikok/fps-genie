@@ -1,0 +1,56 @@
+{
+  "name": "CS2 Demo Analysis Dev Environment",
+  "dockerComposeFile": "docker-compose.dev.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+
+  "features": {
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "1.75",
+      "profile": "default"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates",
+        "tamasfe.even-better-toml",
+        "ms-vscode.vscode-docker",
+        "ms-python.python",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "rust-analyzer.procMacro.enable": true
+      }
+    }
+  },
+
+  "forwardPorts": [
+    5432,  // PostgreSQL/TimescaleDB
+    6379,  // Redis
+    6333,  // Qdrant HTTP
+    6334,  // Qdrant gRPC
+    8080,  // Demo analysis API
+    3000,  // Analytics dashboard
+    8888   // Jupyter notebooks
+  ],
+
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "docker-compose -f docker-compose.dev.yml up -d infrastructure",
+
+  "remoteEnv": {
+    "DATABASE_URL": "postgresql://cs2_user:cs2_password@timescaledb:5432/cs2_analytics",
+    "REDIS_URL": "redis://redis:6379",
+    "QDRANT_URL": "http://qdrant:6333",
+    "RUST_LOG": "debug",
+    "CARGO_TARGET_DIR": "/workspace/target"
+  }
+}

@@ -1,0 +1,14 @@
+log_level: INFO
+service:
+  http_port: 6333
+  grpc_port: 6334
+  enable_cors: true
+
+storage:
+  storage_path: /qdrant/storage
+  snapshots_path: /qdrant/snapshots
+
+cluster:
+  enabled: false
+
+telemetry_disabled: true
