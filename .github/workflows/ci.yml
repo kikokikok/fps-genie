@@ -23,6 +23,11 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -86,7 +91,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
 
       - name: Setup database
         run: |
@@ -157,6 +162,11 @@ jobs:
         with:
           components: clippy
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
@@ -208,7 +218,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
 
       - name: Install system dependencies (macOS)
         if: matrix.os == 'macos-latest'
@@ -298,7 +308,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
 
       - name: Setup database
         run: |
@@ -385,7 +395,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config protobuf-compiler
 
       - name: Setup database
         run: |

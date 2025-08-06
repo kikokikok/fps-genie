@@ -48,7 +48,7 @@ fn benchmark_demo_size_comparison(c: &mut Criterion) {
     for (name, path) in demo_files.iter() {
         let demo_path = Path::new(path);
         if demo_path.exists() {
-            group.bench_function(*name, |b| {
+            group.bench_function(name.to_string(), |b| {
                 b.iter(|| {
                     let result = cs2_ml::data::vectors_from_demo(demo_path);
                     match result {
