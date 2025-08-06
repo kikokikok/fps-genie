@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master, dev, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master, dev, develop ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -257,7 +257,7 @@ jobs:
   benchmark:
     name: Benchmark
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev' || github.ref == 'refs/heads/develop')
     services:
       postgres:
         image: timescale/timescaledb:latest-pg15
