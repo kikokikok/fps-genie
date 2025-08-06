@@ -221,6 +221,11 @@ impl<'a> SecondPassParser<'a> {
         is_baseline: bool,
         events_to_emit: &mut Vec<GameEventInfo>,
     ) -> Result<usize, DemoParserError> {
+        // Add bounds checking before accessing entities vector
+        if entity_id < 0 || entity_id as usize >= self.entities.len() {
+            return Err(DemoParserError::EntityNotFound);
+        }
+
         let entity = match self.entities.get_mut(entity_id as usize) {
             Some(Some(entity)) => entity,
             _ => return Err(DemoParserError::EntityNotFound),
