@@ -12,9 +12,9 @@ on:
   workflow_dispatch:
     inputs:
       rust_version:
-        description: 'Rust version to use (e.g., 1.75)'
+        description: 'Rust version to use (e.g., 1.88)'
         required: false
-        default: '1.75'
+        default: '1.88'
         type: string
       force_rebuild:
         description: 'Force rebuild even if no changes'
@@ -73,7 +73,7 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=rust-${{ inputs.rust_version || '1.75' }},enable={{is_default_branch}}
+            type=raw,value=rust-${{ inputs.rust_version || '1.88' }},enable={{is_default_branch}}
             type=schedule,pattern={{date 'YYYYMMDD'}}
           labels: |
             org.opencontainers.image.title=FPS Genie ${{ matrix.target.name }}
@@ -93,7 +93,7 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.target.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.target.name }}
           build-args: |
-            RUST_VERSION=${{ inputs.rust_version || '1.75' }}
+            RUST_VERSION=${{ inputs.rust_version || '1.88' }}
             BUILDKIT_INLINE_CACHE=1
 
       - name: Test base image
