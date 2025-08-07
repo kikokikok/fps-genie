@@ -1,5 +1,5 @@
 # Multi-stage Docker base image for FPS Genie CI/CD
-FROM rust:1.75-bookworm as rust-base
+FROM rust:1.88-bookworm as rust-base
 
 # Set environment variables for non-interactive installation
 ENV DEBIAN_FRONTEND=noninteractive
