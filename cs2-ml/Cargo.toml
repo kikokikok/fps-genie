@@ -3,6 +3,11 @@ name = "cs2-ml"
 version = "0.1.0"
 edition = "2021"
 
+# Platform-specific ML backend configuration:
+# - Default: cpu-only (works on all platforms, prevents objc/Metal dependencies on Linux)
+# - macOS: can optionally use --features=metal for GPU acceleration  
+# - Linux/Windows: can optionally use --features=cuda with NVIDIA GPUs
+
 [lib]
 name = "cs2_ml"
 path = "src/lib.rs"
