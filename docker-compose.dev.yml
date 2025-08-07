@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # =============================================================================
+  # DevContainer Environment
+  # =============================================================================
+  devcontainer:
+    build:
+      context: .
+      target: development
+    container_name: cs2-dev
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "8080:8080"   # API server
+      - "8888:8888"   # Jupyter notebook
+      - "3000:3000"   # Analytics dashboard
+    environment:
+      - DATABASE_URL=postgresql://cs2_user:cs2_password@timescaledb:5432/cs2_analytics
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+      - CARGO_INCREMENTAL=1
+    depends_on:
+      - timescaledb
+      - redis
+      - qdrant
+    networks:
+      - cs2-dev-network
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+  # =============================================================================
+  # Infrastructure Services
+  # =============================================================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: cs2-dev-timescaledb
+    environment:
+      - POSTGRES_DB=cs2_analytics
+      - POSTGRES_USER=cs2_user
+      - POSTGRES_PASSWORD=cs2_password
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - timescaledb-dev-data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
+      - ./.devcontainer/test-data:/test-data:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - cs2-dev-network
+    restart: unless-stopped
+    command: postgres -c shared_preload_libraries=timescaledb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cs2_user -d cs2_analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: cs2-dev-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-dev-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - cs2-dev-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: cs2-dev-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-dev-data:/qdrant/storage
+      - ./.devcontainer/qdrant-config.yaml:/qdrant/config/production.yaml:ro
+    networks:
+      - cs2-dev-network
+    restart: unless-stopped
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # =============================================================================
+  # Optional Monitoring Services
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cs2-dev-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    volumes:
+      - grafana-dev-data:/var/lib/grafana
+      - ./.devcontainer/grafana:/etc/grafana/provisioning:ro
+    networks:
+      - cs2-dev-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # =============================================================================
+  # Infrastructure Group
+  # =============================================================================
+  infrastructure:
+    image: hello-world
+    depends_on:
+      - timescaledb
+      - redis
+      - qdrant
+    profiles:
+      - infrastructure
+
+# =============================================================================
+# Networks and Volumes
+# =============================================================================
+networks:
+  cs2-dev-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  timescaledb-dev-data:
+  redis-dev-data:
+  qdrant-dev-data:
+  grafana-dev-data:
+  cargo-cache:
+  target-cache:
