@@ -306,11 +306,15 @@ cargo deny check
 
 1. **Platform-Specific Builds**:
    ```bash
-   # Linux: Use CPU-only features for cs2-ml to avoid Metal issues
-   cargo build --workspace --no-default-features
-   
-   # macOS: Default Metal acceleration works
+   # Linux/Windows: Use CPU-only features for cs2-ml (default, recommended)
    cargo build --workspace
+   
+   # macOS with GPU acceleration: Enable Metal features for cs2-ml
+   cargo build --workspace
+   cargo build -p cs2-ml --features=metal  # Optional GPU acceleration
+   
+   # NVIDIA GPU systems: Enable CUDA features for cs2-ml
+   cargo build -p cs2-ml --features=cuda   # Optional GPU acceleration
    ```
 
 2. **Incremental Development**:
@@ -330,7 +334,7 @@ cargo deny check
 | Issue | Platform | Solution |
 |-------|----------|----------|
 | `protobuf-compiler not found` | All | Install protobuf: `apt-get install protobuf-compiler` or `brew install protobuf` |
-| `objc_exception` errors | Linux | Edit `cs2-ml/Cargo.toml`: change `default = ["metal"]` to `default = ["cpu-only"]` |
+| `objc_exception` errors | Linux | Now fixed: cs2-ml defaults to `cpu-only`. Use `--features=metal` only on macOS |
 | Slow builds | All | Use `cargo check` for iteration, `cargo build` only when needed |
 | Database connection errors | All | Run `./setup_databases.sh` and wait 5+ minutes for full initialization |
 | High memory usage | All | Expected for large demos (50MB+ files), not an error |
