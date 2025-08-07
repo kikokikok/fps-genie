@@ -1,5 +1,27 @@
 #![allow(non_snake_case)]
 
+//! Data parsing functionality for CS2 demo files
+//! 
+//! This module provides comprehensive parsing capabilities for CS2 demo files,
+//! specifically designed to capture all events, properties, and player data.
+//! 
+//! The implementation mimics the approach used in e2e_test.rs but is structured
+//! as a reusable module for parsing real demo files like the Vitality vs Spirit match.
+//! 
+//! Key features:
+//! - Comprehensive property list covering 300+ CS2 game properties
+//! - Full event parsing with "all" events configuration
+//! - Custom property mapping for easier data access
+//! - Support for parsing complete matches with all players and ticks
+//! 
+//! Example usage:
+//! ```rust
+//! use cs2_demo_parser::data::parse_vitality_vs_spirit_demo;
+//! 
+//! let (output, prop_controller, events) = parse_vitality_vs_spirit_demo()?;
+//! println!("Parsed {} event types", events.len());
+//! ```
+
 use crate::first_pass::parser_settings::ParserInputs;
 use crate::first_pass::prop_controller::PropController;
 use crate::first_pass::prop_controller::*;

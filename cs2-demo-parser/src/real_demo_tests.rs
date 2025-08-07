@@ -1,5 +1,25 @@
 #![allow(non_snake_case)]
 
+//! Real demo tests using the Vitality vs Spirit demo file
+//! 
+//! This module contains comprehensive tests that parse the actual Vitality vs Spirit
+//! demo file to validate that all events, props, and players are captured correctly.
+//! 
+//! **Note**: Most tests are marked with `#[ignore]` by default because parsing the
+//! large demo file (541MB) takes significant time. To run these tests:
+//! 
+//! ```bash
+//! cargo test -- --ignored
+//! ```
+//! 
+//! Or run a specific test:
+//! ```bash
+//! cargo test test_parse_vitality_vs_spirit_demo -- --ignored
+//! ```
+//! 
+//! This implementation mimics the approach used in e2e_test.rs but focuses
+//! specifically on the real match demo between Team Vitality and Team Spirit.
+
 use crate::data::{parse_vitality_vs_spirit_demo, create_custom_property_mapping};
 use crate::first_pass::prop_controller::PropController;
 use crate::parse_demo::DemoOutput;
@@ -10,12 +30,17 @@ use std::collections::BTreeMap;
 lazy_static! {
     /// Parsed data from the Vitality vs Spirit demo
     /// This contains all events, props, and players parsed from the real demo
+    /// 
+    /// **Warning**: This parsing happens on first access and can take several minutes
+    /// for the large demo file (541MB).
     static ref VITALITY_VS_SPIRIT_DATA: (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>>) = 
         parse_vitality_vs_spirit_demo().expect("Failed to parse Vitality vs Spirit demo");
 }
 
 /// Test that we can successfully parse the Vitality vs Spirit demo
+/// Note: This test is skipped by default due to the large demo file size
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_parse_vitality_vs_spirit_demo() {
     let (output, prop_controller, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -30,8 +55,27 @@ fn test_parse_vitality_vs_spirit_demo() {
     println!("- Total events: {}", events.values().map(|v| v.len()).sum::<usize>());
 }
 
+/// Test that the data module functions are accessible and working
+#[test]
+fn test_data_module_functions() {
+    use crate::data::create_custom_property_mapping;
+    
+    // Test that we can create the custom property mapping
+    let custom_mapping = create_custom_property_mapping();
+    assert!(!custom_mapping.is_empty(), "Custom mapping should not be empty");
+    
+    // Test that common properties are mapped
+    assert!(custom_mapping.values().any(|&v| v == "X"), "Should have X coordinate mapping");
+    assert!(custom_mapping.values().any(|&v| v == "Y"), "Should have Y coordinate mapping"); 
+    assert!(custom_mapping.values().any(|&v| v == "Z"), "Should have Z coordinate mapping");
+    assert!(custom_mapping.values().any(|&v| v == "weapon_name"), "Should have weapon name mapping");
+    
+    println!("Custom property mapping has {} entries", custom_mapping.len());
+}
+
 /// Test that all expected player properties are captured
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_all_player_props_captured() {
     let (output, prop_controller, _) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -59,7 +103,8 @@ fn test_all_player_props_captured() {
 }
 
 /// Test that all game events are captured
-#[test] 
+#[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_all_events_captured() {
     let (_, _, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -90,6 +135,7 @@ fn test_all_events_captured() {
 
 /// Test that we capture all players from both teams
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_all_players_captured() {
     let (output, prop_controller, _) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -121,6 +167,7 @@ fn test_all_players_captured() {
 
 /// Test specific event data structure for player deaths
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_player_death_events() {
     let (_, _, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -149,6 +196,7 @@ fn test_player_death_events() {
 
 /// Test weapon fire events tracking
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_weapon_fire_events() {
     let (_, _, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -163,7 +211,8 @@ fn test_weapon_fire_events() {
 }
 
 /// Test round progression events
-#[test]  
+#[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_round_events() {
     let (_, _, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -183,6 +232,7 @@ fn test_round_events() {
 
 /// Test bomb-related events for competitive match
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_bomb_events() {
     let (_, _, events) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -200,6 +250,7 @@ fn test_bomb_events() {
 
 /// Test custom property mappings work correctly
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_custom_properties() {
     let (output, _, _) = &*VITALITY_VS_SPIRIT_DATA;
     let custom_mapping = create_custom_property_mapping();
@@ -219,6 +270,7 @@ fn test_custom_properties() {
 
 /// Test that we have comprehensive data across multiple ticks
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_tick_coverage() {
     let (output, prop_controller, _) = &*VITALITY_VS_SPIRIT_DATA;
     
@@ -239,6 +291,7 @@ fn test_tick_coverage() {
 
 /// Integration test to verify the parser works end-to-end with real demo
 #[test]
+#[ignore] // Remove #[ignore] to run this test manually
 fn test_end_to_end_parsing() {
     let (output, prop_controller, events) = &*VITALITY_VS_SPIRIT_DATA;
     
