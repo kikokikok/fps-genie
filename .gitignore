@@ -14,6 +14,69 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
+# RustRover
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+### FPS Genie Specific
+# Demo files (can be large)
+demos/
+*.dem
+
+# Training data and models
+training_data/
+models/
+*.ot
+*.parquet
+
+# Database files
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.temp/
+
+### MCP Servers
+# Node modules for MCP servers
+.mcp-servers/node_modules/
+.mcp-servers/package-lock.json
+
+# But keep MCP configuration and servers
+!.mcp/
+!.mcp-servers/*.js
+!.mcp-servers/package.json
+!.mcp-servers/README.md
+
+### Development Environment
+# Docker compose override files
+docker-compose.override.yml
+
+# Environment variables
+.env
+.env.local
+
+# VS Code workspace settings (keep devcontainer config)
+.vscode/
+!.devcontainer/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Backup files
+*~
+*.bak
+*.backup
+
 ### IDE and Editor Files
 # JetBrains IDEs (IntelliJ IDEA, RustRover, CLion, etc.)
 .idea/
@@ -137,3 +200,4 @@ temp/
 
 # Test databases
 test.db*
+

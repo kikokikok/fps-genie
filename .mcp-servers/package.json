@@ -1,0 +1,24 @@
+{
+  "name": "fps-genie-mcp-servers",
+  "version": "1.0.0",
+  "description": "Model Context Protocol servers for FPS Genie CS2 demo analysis system",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "pg": "^8.11.3",
+    "redis": "^4.6.8"
+  },
+  "scripts": {
+    "install-servers": "npm install",
+    "test-database-inspector": "node .mcp-servers/database-inspector.js --test",
+    "test-demo-analyzer": "node .mcp-servers/demo-analyzer.js --test",
+    "test-cargo-helper": "node .mcp-servers/cargo-helper.js --test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.2"
+  }
+}
