@@ -1,15 +1,8 @@
-name: Build and Maintain Base Images
+name: Build and Maintain Base Images (DISABLED)
 
+# This workflow is disabled in favor of using standard rust:bookworm base image
 on:
-  push:
-    paths:
-      - '.docker/base.Dockerfile'
-      - '.github/workflows/base-images.yml'
-    branches: [ main, develop ]
-  schedule:
-    # Rebuild weekly on Sundays to get security updates
-    - cron: '0 2 * * 0'
-  workflow_dispatch:
+  workflow_dispatch:  # Only run manually for now
     inputs:
       rust_version:
         description: 'Rust version to use (e.g., 1.88)'
