@@ -1,0 +1,211 @@
+{
+  "workspaceConfiguration": {
+    "name": "FPS Genie CS2 Demo Analysis System",
+    "description": "High-performance CS2 demo analysis and AI training system built in Rust",
+    
+    "contextualInformation": {
+      "projectType": "rust-workspace",
+      "primaryLanguage": "rust",
+      "buildSystem": "cargo",
+      "architecture": "multi-tier-database-system",
+      
+      "keyTechnologies": [
+        "Rust",
+        "PostgreSQL/TimescaleDB", 
+        "Qdrant Vector Database",
+        "Redis",
+        "PyTorch/ML",
+        "Docker",
+        "TestContainers"
+      ],
+      
+      "performanceTargets": {
+        "demoParsing": "700MB+/second",
+        "databaseIngestion": "10K+ snapshots/second",
+        "memoryUsage": "2-8GB for large demos",
+        "buildTimes": {
+          "cs2-demo-parser": "10 seconds",
+          "cs2-common": "5 seconds",
+          "cs2-data-pipeline": "90 seconds",
+          "cs2-ml": "2+ minutes (platform dependent)"
+        }
+      }
+    },
+    
+    "workspaceStructure": {
+      "crates": {
+        "cs2-demo-parser": {
+          "purpose": "Core CS2 demo file parsing",
+          "buildTime": "10 seconds",
+          "dependencies": ["csgoproto", "cs2-common"],
+          "criticalPath": true
+        },
+        "cs2-ml": {
+          "purpose": "Machine learning models and training",
+          "buildTime": "2+ minutes",
+          "platformIssues": {
+            "linux": "Use --no-default-features to avoid Metal dependency"
+          },
+          "dependencies": ["cs2-common", "candle-framework"]
+        },
+        "cs2-data-pipeline": {
+          "purpose": "Batch processing pipeline",
+          "buildTime": "90 seconds",
+          "dependencies": ["cs2-demo-parser", "cs2-common"]
+        },
+        "cs2-common": {
+          "purpose": "Shared data structures and utilities",
+          "buildTime": "5 seconds",
+          "criticalPath": true
+        },
+        "cs2-demo-analyzer": {
+          "purpose": "CLI analysis tool",
+          "buildTime": "1+ minute",
+          "dependencies": ["cs2-demo-parser", "cs2-common"]
+        },
+        "cs2-client": {
+          "purpose": "Client library",
+          "buildTime": "30 seconds"
+        },
+        "cs2-analytics": {
+          "purpose": "Advanced analytics and visualization",
+          "buildTime": "1+ minute",
+          "dependencies": ["cs2-common", "cs2-ml"]
+        },
+        "cs2-integration-tests": {
+          "purpose": "E2E testing with TestContainers",
+          "buildTime": "2+ minutes",
+          "requiresServices": ["postgresql", "qdrant", "redis"]
+        },
+        "csgoproto": {
+          "purpose": "Protocol buffer definitions",
+          "buildTime": "15 seconds",
+          "dependencies": ["protobuf-compiler"]
+        }
+      }
+    },
+    
+    "developmentWorkflow": {
+      "setupSteps": [
+        "Run ./setup_databases.sh (5-10 minutes first time)",
+        "cargo check --workspace (2-3 minutes)",
+        "cargo test --lib --workspace (1-2 minutes)"
+      ],
+      
+      "iterativeDevelopment": [
+        "Use cargo check -p <crate> for fast iteration",
+        "Run tests frequently with cargo test -p <crate>",
+        "Format code with cargo fmt --all",
+        "Check lints with cargo clippy --workspace"
+      ],
+      
+      "commonCommands": {
+        "fastCheck": "cargo check -p cs2-demo-parser",
+        "fullBuild": "cargo build --workspace",
+        "unitTests": "cargo test --lib --workspace --quiet",
+        "integrationTests": "cargo test --package cs2-integration-tests --features integration-tests",
+        "formatAndLint": "cargo fmt --all && cargo clippy --workspace --all-targets --all-features -- -D warnings"
+      }
+    },
+    
+    "databaseArchitecture": {
+      "tiers": {
+        "postgresql": {
+          "port": 5432,
+          "purpose": "Match metadata, player info, tournament data",
+          "connectionString": "postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis"
+        },
+        "timescaledb": {
+          "port": 5432,
+          "purpose": "Time-series player snapshots (millions per match)",
+          "connectionString": "postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis",
+          "optimization": "Hypertables for time-series data"
+        },
+        "qdrant": {
+          "port": 6333,
+          "purpose": "Vector embeddings for behavioral similarity search",
+          "connectionString": "http://localhost:6333"
+        },
+        "redis": {
+          "port": 6379,
+          "purpose": "Caching and job queues",
+          "connectionString": "redis://localhost:6379"
+        }
+      }
+    },
+    
+    "criticalPaths": {
+      "demoParsing": [
+        "cs2-demo-parser reads .dem files",
+        "Extracts player snapshots (~100 fields per tick)",
+        "Stores in TimescaleDB with batch processing",
+        "Generates behavioral vectors for Qdrant"
+      ],
+      
+      "mlTraining": [
+        "cs2-ml processes demo data",
+        "Creates behavioral embeddings",
+        "Trains player behavior models",
+        "Serves models for real-time coaching"
+      ]
+    },
+    
+    "platformSpecifics": {
+      "linux": {
+        "requiredPackages": [
+          "build-essential",
+          "clang", 
+          "protobuf-compiler",
+          "libfontconfig1-dev"
+        ],
+        "mlNotes": "Use --no-default-features for cs2-ml to avoid Metal dependency"
+      },
+      "macos": {
+        "requiredPackages": [
+          "cmake",
+          "protobuf",
+          "pkg-config"
+        ],
+        "mlNotes": "Metal acceleration available by default"
+      }
+    },
+    
+    "troubleshooting": {
+      "buildFailures": {
+        "protobufErrors": "Install protobuf-compiler",
+        "objcExceptionLinux": "Switch cs2-ml to cpu-only features",
+        "fontconfigErrors": "Install libfontconfig1-dev",
+        "buildHanging": "NEVER CANCEL - builds can take 5+ minutes"
+      },
+      
+      "databaseIssues": {
+        "connectionRefused": "Run ./setup_databases.sh and wait 5+ minutes",
+        "timescaleExtension": "Database needs 2-3 minutes to fully initialize",
+        "dockerIssues": "Check docker compose ps and docker compose logs"
+      }
+    }
+  },
+  
+  "copilotSettings": {
+    "suggestions": {
+      "includeDocumentation": true,
+      "includeComments": false,
+      "includeTests": true
+    },
+    
+    "contextAwareness": {
+      "enableRustSpecificSuggestions": true,
+      "enableCargoIntegration": true,
+      "enableDatabaseContexts": true,
+      "enablePerformanceOptimizations": true
+    },
+    
+    "customPrompts": {
+      "newFeature": "When implementing new features, always consider: 1) Performance impact (700MB+/s target), 2) Database schema changes, 3) Test coverage, 4) Platform compatibility (Linux/macOS)",
+      
+      "codeReview": "Review for: 1) Rust best practices, 2) Error handling, 3) Performance implications, 4) Memory safety, 5) Database query optimization",
+      
+      "debugging": "When debugging: 1) Check build dependencies first, 2) Verify database connections, 3) Check for platform-specific issues (Metal on Linux), 4) Review timing expectations (builds take 2-5 minutes)"
+    }
+  }
+}

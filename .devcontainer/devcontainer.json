@@ -23,20 +23,74 @@
         "GitHub.copilot",
         "GitHub.copilot-chat",
         "ms-azuretools.vscode-docker",
-        "ms-vscode.vscode-yaml"
+        "ms-vscode.vscode-yaml",
+        "ms-vscode-remote.remote-containers",
+        "ms-python.python",
+        "ms-vscode.cmake-tools",
+        "formulahendry.code-runner"
       ],
       "settings": {
         "rust-analyzer.cargo.buildScripts.enable": true,
         "rust-analyzer.procMacro.enable": true,
         "rust-analyzer.cargo.loadOutDirsFromCheck": true,
         "rust-analyzer.experimental.procAttrMacros": true,
+        "rust-analyzer.cargo.features": "all",
+        "rust-analyzer.checkOnSave.command": "check",
+        "rust-analyzer.checkOnSave.extraArgs": ["--workspace"],
         "editor.formatOnSave": true,
         "editor.defaultFormatter": "rust-lang.rust-analyzer",
         "[rust]": {
-          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.codeActionsOnSave": {
+            "source.fixAll.rust-analyzer": true
+          }
+        },
+        "[toml]": {
+          "editor.defaultFormatter": "tamasfe.even-better-toml"
         },
         "files.watcherExclude": {
-          "**/target/**": true
+          "**/target/**": true,
+          "**/node_modules/**": true,
+          "**/.git/**": true
+        },
+        "github.copilot.enable": {
+          "*": true,
+          "yaml": true,
+          "plaintext": true,
+          "markdown": true,
+          "rust": true,
+          "toml": true,
+          "json": true,
+          "dockerfile": true,
+          "shellscript": true
+        },
+        "github.copilot.advanced": {
+          "debug.overrideEngine": "copilot-chat",
+          "length": 500,
+          "temperature": 0.1,
+          "top_p": 1,
+          "inlineSuggestCount": 3
+        },
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "args": ["-l"]
+          }
+        },
+        "workbench.colorTheme": "Default Dark+",
+        "workbench.startupEditor": "readme",
+        "explorer.confirmDelete": false,
+        "explorer.confirmDragAndDrop": false,
+        "git.autofetch": true,
+        "git.enableSmartCommit": true,
+        "extensions.autoUpdate": true,
+        "search.exclude": {
+          "**/target": true,
+          "**/node_modules": true,
+          "**/.git": true,
+          "**/demos": true,
+          "**/training_data": true
         }
       }
     }

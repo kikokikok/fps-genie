@@ -1,0 +1,61 @@
+{
+  "welcomeMessage": "Welcome to FPS Genie! 🎮 I'm here to help with CS2 demo analysis, Rust development, and ML training. Here are some things I can help with:\n\n🎯 **Quick Commands:**\n- `@workspace /explain` - Explain project architecture\n- `@workspace /new-feature` - Help design new features\n- `@workspace /debug-demo` - Debug demo parsing issues\n- `@workspace /optimize-ml` - ML model optimization\n- `@workspace /database-help` - Database schema and queries\n\n📊 **Project Context:**\n- High-performance CS2 demo analysis system\n- Multi-tier database architecture (PostgreSQL/TimescaleDB/Qdrant)\n- Rust workspace with 11 crates\n- ML training for pro player behavior analysis\n\n⚠️ **Important Notes:**\n- Always run `./setup_databases.sh` before development\n- Never cancel long-running builds (2-5 minutes normal)\n- Use `cargo check -p <crate>` for faster iteration\n- Linux users: use `--no-default-features` for cs2-ml\n\nWhat would you like to work on?",
+  
+  "responses": {
+    "/explain": {
+      "response": "# FPS Genie Architecture Overview\n\nThis is a **high-performance CS2 demo analysis and AI training system** built in Rust.\n\n## 🏗️ **Core Architecture**\n\n### **Rust Workspace Structure:**\n```\nfps-genie/\n├── cs2-demo-parser/     # Core demo parsing (10s builds)\n├── cs2-ml/              # ML models (2+ min builds)\n├── cs2-data-pipeline/   # Batch processing (90s builds)\n├── cs2-common/          # Shared utilities (fast)\n├── cs2-demo-analyzer/   # CLI analysis tool\n├── cs2-client/          # Client library\n├── cs2-analytics/       # Advanced analytics\n├── cs2-integration-tests/ # E2E testing\n└── csgoproto/          # Protocol buffers\n```\n\n### **Database Tiers:**\n1. **PostgreSQL** - Match metadata, player info\n2. **TimescaleDB** - Time-series player snapshots (millions per match)\n3. **Qdrant** - Vector embeddings for behavioral similarity\n4. **Redis** - Caching and job queues\n\n### **Data Flow:**\n1. Demo Discovery → 2. Parsing → 3. Database Storage → 4. ML Analysis → 5. API Serving\n\n## 🎯 **Key Features:**\n- **Pro Player Comparison** - Skill gap analysis\n- **AI Coaching** - Real-time feedback\n- **Behavior Cloning** - Learn from pro demos\n- **Performance Analysis** - 700MB+/s processing\n\n## 🚀 **Performance Targets:**\n- 700MB+/s demo parsing\n- 10K+ snapshots/sec ingestion\n- 2-8GB RAM for large demos\n- 5TB+ TimescaleDB capacity\n\nNeed help with a specific component?"
+    },
+    
+    "/new-feature": {
+      "response": "# 🚀 Adding New Features to FPS Genie\n\n## **Development Workflow:**\n\n### 1. **Setup Environment**\n```bash\n# Start infrastructure (5-10 minutes first time)\n./setup_databases.sh\n\n# Quick workspace check (2-3 minutes)\ncargo check --workspace\n```\n\n### 2. **Choose Your Crate**\n- **cs2-demo-parser**: Core parsing logic\n- **cs2-ml**: Machine learning features\n- **cs2-analytics**: Analysis and insights\n- **cs2-data-pipeline**: Batch processing\n- **cs2-common**: Shared data structures\n\n### 3. **Development Pattern**\n```bash\n# Fast iteration on specific crate\ncargo check -p <crate-name>\n\n# Run relevant tests\ncargo test -p <crate-name>\n\n# Full integration test when ready\ncargo test --workspace\n```\n\n## **Feature Categories:**\n\n### 📊 **Analytics Features** (`cs2-analytics/`)\n- Heatmap generation\n- Player performance metrics\n- Team coordination analysis\n- Clutch situation detection\n\n### 🤖 **ML Features** (`cs2-ml/`)\n- New behavioral models\n- Player style classification\n- Prediction algorithms\n- Training data augmentation\n\n### 📈 **Pipeline Features** (`cs2-data-pipeline/`)\n- New data sources\n- Processing optimizations\n- Export formats\n- Batch job scheduling\n\n## **Best Practices:**\n- Use existing data models in `cs2-common`\n- Add comprehensive tests\n- Follow performance targets (700MB+/s)\n- Document database schema changes\n\nWhat type of feature are you planning to add?"
+    },
+    
+    "/debug-demo": {
+      "response": "# 🔧 Debugging CS2 Demo Processing\n\n## **Common Demo Issues:**\n\n### 1. **File Path Problems**\n```bash\n# Test with known good demo\ncargo run -p cs2-demo-parser --bin parser -- test_data/vitality-vs-spirit-m1-dust2.dem\n\n# Check file exists and permissions\nls -la test_data/*.dem\n```\n\n### 2. **Memory Issues**\n- **Normal**: 2-8GB RAM for large demos\n- **Problem**: System running out of memory\n- **Solution**: Reduce batch size in pipeline\n\n### 3. **Parsing Errors**\n```bash\n# Enable debug logging\nRUST_LOG=debug cargo run -p cs2-demo-parser -- <demo>\n\n# Check demo file integrity\nfile <demo.dem>\nhexdump -C <demo.dem> | head\n```\n\n### 4. **Performance Issues**\n```bash\n# Expected: 700MB+/s on high-end hardware\n# Profile with:\ncargo build --release\ntime cargo run --release -p cs2-demo-parser -- <demo>\n```\n\n## **Database Connection Issues:**\n```bash\n# Check database status\ndocker compose ps\n\n# View logs\ndocker compose logs\n\n# Restart if needed\ndocker compose down && ./setup_databases.sh\n```\n\n## **Build Issues:**\n\n### **Linux Metal Error (cs2-ml)**\n```bash\n# Switch to CPU-only\ncargo build --workspace --no-default-features\n```\n\n### **Protobuf Errors**\n```bash\n# Install required tools\nsudo apt-get install -y protobuf-compiler libfontconfig1-dev\n```\n\n## **Testing Framework:**\n```bash\n# Unit tests (fast)\ncargo test --lib -p cs2-demo-parser\n\n# Integration tests (5-15 minutes)\ncargo test --package cs2-integration-tests --features integration-tests\n\n# Specific test\ncargo test test_demo_parsing\n```\n\nWhat specific issue are you encountering?"
+    },
+    
+    "/optimize-ml": {
+      "response": "# 🤖 ML Model Optimization in FPS Genie\n\n## **Current ML Pipeline:**\n\n### **Training Commands** (NEVER CANCEL - 15+ minutes)\n```bash\ncd cs2-ml\n\n# Prepare data (5+ minutes)\ncargo run -- prepare \"demos/*.dem\" ./data\n\n# Train models (15-60 minutes)\ncargo run -- train ./data/*.parquet ./policy.ot --epochs 1000\n\n# Serve model\ncargo run -- serve ./policy.ot --port 8123\n```\n\n## **Optimization Strategies:**\n\n### 1. **Data Pipeline Optimization**\n- **Batch Processing**: Use `cs2-data-pipeline` for large datasets\n- **Parallel Processing**: 4-8 concurrent jobs typical\n- **Memory Management**: Monitor 2-8GB usage\n\n### 2. **Model Architecture**\n- **Behavioral Vectors**: High-dimensional embeddings\n- **Player Snapshots**: ~100 fields per tick\n- **Time-Series**: Leverage TimescaleDB partitioning\n\n### 3. **Training Optimizations**\n```rust\n// Example: Batch size tuning\nlet batch_size = match available_memory {\n    mem if mem > 16_000_000_000 => 1000,  // 16GB+\n    mem if mem > 8_000_000_000 => 500,   // 8GB+\n    _ => 250,                             // < 8GB\n};\n```\n\n### 4. **Platform-Specific**\n```bash\n# macOS (Metal acceleration)\ncargo build --features metal\n\n# Linux (CPU-only)\ncargo build --no-default-features\n```\n\n## **Performance Targets:**\n- **Training Data**: 50+ professional matches daily\n- **Inference**: Real-time coaching feedback\n- **Embeddings**: 2TB+ vector storage in Qdrant\n- **Processing**: 10K+ snapshots/second\n\n## **Monitoring:**\n```bash\n# Check training progress\ncargo run -- train --verbose ./data/*.parquet ./model.ot\n\n# Performance benchmarks\ncargo bench --package cs2-ml\n\n# Memory profiling\nheaptrack cargo run -- train ./data/*.parquet ./model.ot\n```\n\n## **ML Features Available:**\n- **Pro Player Behavior Cloning**\n- **Crosshair Placement Analysis**\n- **Tactical Decision Analysis**\n- **Performance Comparison Algorithms**\n\nWhat aspect of ML optimization would you like to focus on?"
+    },
+    
+    "/database-help": {
+      "response": "# 🗄️ Database Architecture & Operations\n\n## **Multi-Tier Database Setup:**\n\n### **1. PostgreSQL** (Port 5432)\n```sql\n-- Match metadata, player info, tournament data\nCREATE TABLE matches (\n    id SERIAL PRIMARY KEY,\n    demo_path VARCHAR(500),\n    processed_at TIMESTAMPTZ,\n    match_metadata JSONB\n);\n```\n\n### **2. TimescaleDB** (Same connection, different tables)\n```sql\n-- Time-series player snapshots (millions per match)\nCREATE TABLE player_snapshots (\n    time TIMESTAMPTZ NOT NULL,\n    player_id INTEGER,\n    position_x FLOAT,\n    position_y FLOAT,\n    position_z FLOAT,\n    -- ~100 fields total\n);\n\nSELECT create_hypertable('player_snapshots', 'time');\n```\n\n### **3. Qdrant** (Port 6333)\n```bash\n# Vector embeddings for behavioral similarity\ncurl -X PUT 'http://localhost:6333/collections/behavioral_vectors' \\\n-H 'Content-Type: application/json' \\\n-d '{\n    \"vectors\": {\n        \"size\": 512,\n        \"distance\": \"Cosine\"\n    }\n}'\n```\n\n### **4. Redis** (Port 6379)\n```bash\n# Caching and job queues\nredis-cli SET \"match:12345:processed\" \"true\"\nredis-cli LPUSH \"processing_queue\" \"demo_path.dem\"\n```\n\n## **Database Operations:**\n\n### **Setup & Status**\n```bash\n# Start all databases (5-10 minutes first time)\n./setup_databases.sh\n\n# Check status\ndocker compose ps\n\n# View logs\ndocker compose logs postgres\ndocker compose logs qdrant\n```\n\n### **Environment Variables**\n```bash\nexport DATABASE_URL=\"postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis\"\nexport TIMESCALE_URL=\"postgresql://cs2_user:cs2_password@localhost:5432/cs2_analysis\"\nexport QDRANT_URL=\"http://localhost:6333\"\nexport REDIS_URL=\"redis://localhost:6379\"\n```\n\n## **Performance Optimization:**\n\n### **TimescaleDB Settings**\n```sql\n-- Optimize for time-series ingestion\nSET timescaledb.max_background_workers = 8;\nSET shared_preload_libraries = 'timescaledb';\nSET max_connections = 200;\n```\n\n### **Batch Processing**\n```rust\n// Insert in batches for performance\nlet batch_size = 1000;\nfor chunk in player_snapshots.chunks(batch_size) {\n    db.insert_snapshots_batch(chunk).await?;\n}\n```\n\n## **Data Models:**\n- **PlayerSnapshot**: Complete player state at tick (~100 fields)\n- **BehavioralVector**: AI-generated embeddings (512 dimensions)\n- **KeyMoment**: Significant gameplay situations\n- **Match**: Match metadata and processing status\n\n## **Scale Targets:**\n- **TimescaleDB**: 5TB+ capacity, 10K+ snapshots/second\n- **Qdrant**: 2TB+ vector embeddings\n- **Processing**: 50+ professional matches daily\n\nWhat database operation would you like help with?"
+    }
+  },
+
+  "contextFiles": [
+    ".github/copilot-instructions.md",
+    "Cargo.toml",
+    "PROJECT_CONTEXT.md",
+    "setup_databases.sh",
+    "docker-compose.yml"
+  ],
+
+  "agents": {
+    "demo-parser": {
+      "description": "Specialist in CS2 demo file parsing and data extraction",
+      "context": ["cs2-demo-parser/**", "csgoproto/**", "test_data/**"]
+    },
+    "ml-engineer": {
+      "description": "Machine learning model development and training",
+      "context": ["cs2-ml/**", "cs2-analytics/**", "training_data/**"]
+    },
+    "database-architect": {
+      "description": "Database design, optimization, and operations",
+      "context": ["sql/**", "cs2-data-pipeline/**", "setup_databases.sh"]
+    },
+    "devops": {
+      "description": "Infrastructure, CI/CD, and deployment",
+      "context": [".github/workflows/**", ".devcontainer/**", "docker-compose.yml"]
+    }
+  },
+
+  "shortcuts": {
+    "build-check": "cargo check --workspace",
+    "test-fast": "cargo test --lib --workspace --quiet",
+    "test-integration": "cargo test --package cs2-integration-tests --features integration-tests",
+    "fmt-clippy": "cargo fmt --all && cargo clippy --workspace --all-targets --all-features -- -D warnings",
+    "db-setup": "./setup_databases.sh",
+    "db-status": "docker compose ps"
+  }
+}
