@@ -1,46 +1,21 @@
 # Multi-stage build for CS2 Demo Analysis Tools
-# Use our custom base image with all dependencies pre-installed
-FROM ghcr.io/kikokikok/fps-genie-ci-base:latest as builder
+FROM rust:1.88-bookworm AS builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    protobuf-compiler \
+    libfontconfig1-dev \
+    libssl-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy manifests first for better layer caching
-COPY Cargo.toml Cargo.lock ./
-COPY cs2-analytics/Cargo.toml cs2-analytics/
-COPY cs2-client/Cargo.toml cs2-client/
-COPY cs2-common/Cargo.toml cs2-common/
-COPY cs2-data-pipeline/Cargo.toml cs2-data-pipeline/
-COPY cs2-demo-analyzer/Cargo.toml cs2-demo-analyzer/
-COPY cs2-demo-parser/Cargo.toml cs2-demo-parser/
-COPY cs2-integration-tests/Cargo.toml cs2-integration-tests/
-COPY cs2-ml/Cargo.toml cs2-ml/
-COPY csgoproto/Cargo.toml csgoproto/
-
-# Create dummy source files to cache dependencies
-RUN mkdir -p cs2-analytics/src cs2-client/src cs2-common/src cs2-data-pipeline/src \
-    cs2-demo-analyzer/src cs2-demo-parser/src cs2-integration-tests/src \
-    cs2-ml/src csgoproto/src && \
-    echo "fn main() {}" > cs2-analytics/src/main.rs && \
-    echo "fn main() {}" > cs2-data-pipeline/src/main.rs && \
-    echo "fn main() {}" > cs2-demo-analyzer/src/main.rs && \
-    echo "fn main() {}" > cs2-ml/src/main.rs && \
-    echo "fn main() {}" > csgoproto/src/main.rs && \
-    echo "// dummy" > cs2-client/src/lib.rs && \
-    echo "// dummy" > cs2-common/src/lib.rs && \
-    echo "// dummy" > cs2-demo-parser/src/lib.rs && \
-    echo "// dummy" > cs2-integration-tests/src/lib.rs
-
-# Build dependencies (cached layer)
-RUN cargo build --release --workspace
-
-# Copy actual source code
+# Copy source code
 COPY . .
 
-# Touch source files to force rebuild of app code only
-RUN find . -name "*.rs" -exec touch {} +
-
-# Build for release with all dependencies cached
-RUN cargo build --release --workspace
+# Build for release - skip tests and examples for faster builds
+RUN cargo build --release --workspace --bins
 
 # Runtime image
 FROM debian:bookworm-slim

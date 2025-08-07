@@ -1,10 +1,8 @@
-name: CI with Docker Base Images
+name: CI with Docker Base Images (DISABLED)
 
+# This workflow is disabled in favor of the simplified CI workflow
 on:
-  push:
-    branches: [ main, master, dev, develop ]
-  pull_request:
-    branches: [ main, master, dev, develop ]
+  workflow_dispatch:  # Only run manually for now
 
 env:
   CARGO_TERM_COLOR: always
