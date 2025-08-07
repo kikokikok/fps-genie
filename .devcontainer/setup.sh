@@ -5,22 +5,36 @@ echo "🚀 Setting up CS2 Demo Analysis Dev Environment..."
 
 # Wait for services to be healthy
 echo "⏳ Waiting for infrastructure services to be ready..."
-until docker-compose -f docker-compose.dev.yml exec timescaledb pg_isready -U cs2_user -d cs2_analytics; do
-  echo "Waiting for TimescaleDB..."
-  sleep 2
-done
 
-until docker-compose -f docker-compose.dev.yml exec redis redis-cli ping; do
-  echo "Waiting for Redis..."
+# Wait for TimescaleDB
+echo "Waiting for TimescaleDB..."
+until pg_isready -h timescaledb -p 5432 -U cs2_user -d cs2_analytics; do
+  echo "  Still waiting for TimescaleDB..."
   sleep 2
 done
+echo "✅ TimescaleDB is ready"
 
-until curl -f http://qdrant:6333/health; do
-  echo "Waiting for Qdrant..."
+# Wait for Redis
+echo "Waiting for Redis..."
+until redis-cli -h redis ping | grep -q PONG; do
+  echo "  Still waiting for Redis..."
   sleep 2
 done
+echo "✅ Redis is ready"
+
+# Wait for Qdrant
+echo "Waiting for Qdrant..."
+until curl -f http://qdrant:6333/health > /dev/null 2>&1; do
+  echo "  Still waiting for Qdrant..."
+  sleep 2
+done
+echo "✅ Qdrant is ready"
 
 echo "✅ Infrastructure services are ready!"
+
+# Set up Jupyter environment
+echo "🔬 Setting up Jupyter environment..."
+bash /workspace/.devcontainer/setup_jupyter.sh
 
 # Initialize database schemas
 echo "🗄️ Initializing database schemas..."
