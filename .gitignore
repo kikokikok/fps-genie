@@ -14,9 +14,126 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-# RustRover
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+### IDE and Editor Files
+# JetBrains IDEs (IntelliJ IDEA, RustRover, CLion, etc.)
+.idea/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Vim/Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+### System Files
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.directory
+
+### CS2 Demo Analysis & AI Training Specific Files
+# Demo files (large binary files, keep test_data/ demos for testing)
+demos/
+*.dem
+!test_data/*.dem
+
+# Data processing outputs
+*.parquet
+*.arrow
+data/
+training_data/
+processed_data/
+output/
+
+# Machine Learning artifacts
+models/
+*.ot
+*.pt
+*.pth
+*.h5
+*.model
+*.pkl
+*.joblib
+*.onnx
+checkpoints/
+logs/
+tensorboard/
+wandb/
+
+# Analysis and processing outputs
+analysis_results/
+reports/
+benchmarks/
+coverage/
+flamegraph.svg
+perf.data*
+
+### Environment and Configuration
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*
+!.env.example
+
+# Local configuration overrides
+config.local.*
+docker-compose.override.yml
+docker-compose.local.yml
+
+### Temporary and Log Files
+# Logs
+*.log
+*.log.*
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+tmp/
+temp/
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+### Database and Development Tools
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Test databases
+test.db*
