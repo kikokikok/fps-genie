@@ -1,0 +1,195 @@
+name: Build and Maintain Base Images
+
+on:
+  push:
+    paths:
+      - '.docker/base.Dockerfile'
+      - '.github/workflows/base-images.yml'
+    branches: [ main, develop ]
+  schedule:
+    # Rebuild weekly on Sundays to get security updates
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      rust_version:
+        description: 'Rust version to use (e.g., 1.75)'
+        required: false
+        default: '1.75'
+        type: string
+      force_rebuild:
+        description: 'Force rebuild even if no changes'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  BASE_IMAGE_NAME: fps-genie-ci-base
+  DEV_IMAGE_NAME: fps-genie-dev-base
+
+jobs:
+  build-base-images:
+    name: Build Base Images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    strategy:
+      matrix:
+        target:
+          - name: ci-base
+            dockerfile_target: ci-base
+            platforms: linux/amd64,linux/arm64
+          - name: dev-base
+            dockerfile_target: dev-base
+            platforms: linux/amd64,linux/arm64
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: network=host
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.target.name }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=rust-${{ inputs.rust_version || '1.75' }},enable={{is_default_branch}}
+            type=schedule,pattern={{date 'YYYYMMDD'}}
+          labels: |
+            org.opencontainers.image.title=FPS Genie ${{ matrix.target.name }}
+            org.opencontainers.image.description=Rust development environment for FPS Genie CS2 analysis
+            org.opencontainers.image.vendor=FPS Genie Project
+
+      - name: Build and push base image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: .docker/base.Dockerfile
+          target: ${{ matrix.target.dockerfile_target }}
+          platforms: ${{ matrix.target.platforms }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.target.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.target.name }}
+          build-args: |
+            RUST_VERSION=${{ inputs.rust_version || '1.75' }}
+            BUILDKIT_INLINE_CACHE=1
+
+      - name: Test base image
+        run: |
+          # Test the built image
+          docker run --rm \
+            ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.target.name }}:latest \
+            bash -c "
+              rustc --version &&
+              cargo --version &&
+              protoc --version &&
+              clang --version
+            "
+
+      - name: Generate security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository }}-${{ matrix.target.name }}:latest
+          format: 'sarif'
+          output: 'trivy-results-${{ matrix.target.name }}.sarif'
+
+      - name: Upload security scan results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results-${{ matrix.target.name }}.sarif'
+
+  update-ci-workflows:
+    name: Update CI References
+    runs-on: ubuntu-latest
+    needs: build-base-images
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update base image references
+        run: |
+          # Update the main CI workflow to use the latest base image
+          sed -i 's|BASE_IMAGE: ghcr.io/${{ github.repository }}-ci-base.*|BASE_IMAGE: ghcr.io/${{ github.repository }}-ci-base:latest|g' .github/workflows/ci.yml
+          
+          # Check if there are any changes
+          if git diff --quiet; then
+            echo "No updates needed"
+          else
+            echo "Base image references updated"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add .github/workflows/ci.yml
+            git commit -m "chore: update base image references to latest build"
+            git push
+          fi
+
+  cleanup-old-images:
+    name: Cleanup Old Images
+    runs-on: ubuntu-latest
+    needs: build-base-images
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Delete old package versions
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: fps-genie-ci-base
+          package-type: container
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: true
+
+      - name: Delete old dev package versions
+        uses: actions/delete-package-versions@v4
+        with:
+          package-name: fps-genie-dev-base
+          package-type: container
+          min-versions-to-keep: 5
+          delete-only-untagged-versions: true
+
+  notify-build-completion:
+    name: Notify Build Completion
+    runs-on: ubuntu-latest
+    needs: [build-base-images, update-ci-workflows, cleanup-old-images]
+    if: always()
+    steps:
+      - name: Create build summary
+        run: |
+          echo "# Base Image Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Base Images: ${{ needs.build-base-images.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- CI Updates: ${{ needs.update-ci-workflows.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Cleanup: ${{ needs.cleanup-old-images.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Available Images" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${{ github.repository }}-ci-base:latest\` - CI environment with Rust tools" >> $GITHUB_STEP_SUMMARY
+          echo "- \`ghcr.io/${{ github.repository }}-dev-base:latest\` - Development environment with additional tools" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Base images are automatically used by CI workflows" >> $GITHUB_STEP_SUMMARY
+          echo "2. Use \`ghcr.io/${{ github.repository }}-dev-base:latest\` for local development" >> $GITHUB_STEP_SUMMARY
+          echo "3. Images are scanned for security vulnerabilities" >> $GITHUB_STEP_SUMMARY

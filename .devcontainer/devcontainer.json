@@ -1,0 +1,97 @@
+{
+  "name": "FPS Genie Development Environment",
+  "image": "ghcr.io/kikokikok/fps-genie-dev-base:latest",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "vadimcn.vscode-lldb",
+        "ms-vscode.vscode-json",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode.vscode-yaml"
+      ],
+      "settings": {
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "rust-analyzer.procMacro.enable": true,
+        "rust-analyzer.cargo.loadOutDirsFromCheck": true,
+        "rust-analyzer.experimental.procAttrMacros": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer"
+        },
+        "files.watcherExclude": {
+          "**/target/**": true
+        }
+      }
+    }
+  },
+
+  "containerEnv": {
+    "RUST_BACKTRACE": "1",
+    "CARGO_TERM_COLOR": "always"
+  },
+
+  "mounts": [
+    "source=${localWorkspaceFolder}/target,target=/workspace/target,type=bind,consistency=cached",
+    "source=fps-genie-cargo-cache,target=/usr/local/cargo/registry,type=volume"
+  ],
+
+  "forwardPorts": [
+    5432,
+    6333,
+    6334,
+    6379,
+    9000,
+    9001
+  ],
+
+  "portsAttributes": {
+    "5432": {
+      "label": "PostgreSQL/TimescaleDB",
+      "onAutoForward": "notify"
+    },
+    "6333": {
+      "label": "Qdrant HTTP",
+      "onAutoForward": "notify"
+    },
+    "6334": {
+      "label": "Qdrant gRPC",
+      "onAutoForward": "ignore"
+    },
+    "6379": {
+      "label": "Redis",
+      "onAutoForward": "ignore"
+    },
+    "9000": {
+      "label": "MinIO API",
+      "onAutoForward": "ignore"
+    },
+    "9001": {
+      "label": "MinIO Console",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "remoteUser": "runner",
+  "workspaceFolder": "/workspace",
+
+  "shutdownAction": "stopContainer"
+}
