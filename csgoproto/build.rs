@@ -28,10 +28,18 @@ fn main() -> Result<()> {
     ];
 
     prost_build::Config::new()
-        .format(false)
+        .format(true) // Enable formatting by prost
         .out_dir("src")
         .default_package_filename("protobuf")
         .bytes(["."])
         .enum_attribute(".", "#[derive(::strum::EnumIter)]")
-        .compile_protos(&protos, &["GameTracking-CS2/Protobufs/"])
+        .compile_protos(&protos, &["GameTracking-CS2/Protobufs/"])?;
+
+    // Format the generated code with rustfmt (ignore errors)
+    let output_file = std::path::Path::new("src").join("protobuf.rs");
+    if output_file.exists() {
+        let _ = Command::new("rustfmt").arg(&output_file).status();
+    }
+
+    Ok(())
 }

@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use anyhow::Result;
+use std::sync::Arc;
 use uuid::Uuid;
 
-use cs2_data_pipeline::{DatabaseManager, DemoProcessor, PipelineConfig};
 use cs2_common::BehavioralVector;
+use cs2_data_pipeline::{DatabaseManager, DemoProcessor, PipelineConfig};
 
 /// Test infrastructure that manages all required services
 /// For now, we'll use a simplified approach without containers for integration tests
@@ -20,13 +20,10 @@ impl TestInfrastructure {
         let qdrant_url = "http://localhost:6333";
 
         // Initialize database manager
-        let db_manager = Arc::new(
-            DatabaseManager::new(postgres_url, postgres_url, qdrant_url).await?
-        );
+        let db_manager =
+            Arc::new(DatabaseManager::new(postgres_url, postgres_url, qdrant_url).await?);
 
-        Ok(Self {
-            db_manager,
-        })
+        Ok(Self { db_manager })
     }
 
     pub fn db_manager(&self) -> Arc<DatabaseManager> {

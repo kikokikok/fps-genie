@@ -3,13 +3,13 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::{info, Level};
 
-mod training;
 mod analysis;
-mod visualization;
 mod models;
+mod training;
+mod visualization;
 
-use training::TrainingPipeline;
 use analysis::AdvancedAnalytics;
+use training::TrainingPipeline;
 use visualization::AnalyticsVisualizer;
 
 #[derive(Parser)]
@@ -100,10 +100,12 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let log_level = if cli.verbose { Level::DEBUG } else { Level::INFO };
-    tracing_subscriber::fmt()
-        .with_max_level(log_level)
-        .init();
+    let log_level = if cli.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
     // Create output directory
     tokio::fs::create_dir_all(&cli.output_dir).await?;
@@ -114,14 +116,26 @@ async fn main() -> Result<()> {
     let visualizer = AnalyticsVisualizer::new(&cli.output_dir);
 
     match cli.command {
-        Commands::Train { config, model_type, epochs } => {
+        Commands::Train {
+            config,
+            model_type,
+            epochs,
+        } => {
             info!("🤖 Starting advanced ML training pipeline...");
-            training_pipeline.train_model(&model_type, epochs, config).await?;
+            training_pipeline
+                .train_model(&model_type, epochs, config)
+                .await?;
         }
 
-        Commands::Analyze { matches, players, analysis_type } => {
+        Commands::Analyze {
+            matches,
+            players,
+            analysis_type,
+        } => {
             info!("📊 Running advanced analytics...");
-            analytics.run_analysis(&analysis_type, matches, players).await?;
+            analytics
+                .run_analysis(&analysis_type, matches, players)
+                .await?;
         }
 
         Commands::Visualize { input, viz_type } => {
@@ -129,9 +143,15 @@ async fn main() -> Result<()> {
             visualizer.generate_visualization(&viz_type, &input).await?;
         }
 
-        Commands::Compare { player, pro_players, detailed } => {
+        Commands::Compare {
+            player,
+            pro_players,
+            detailed,
+        } => {
             info!("🆚 Running pro player comparison for SteamID: {}", player);
-            analytics.compare_with_pros(player, pro_players, detailed).await?;
+            analytics
+                .compare_with_pros(player, pro_players, detailed)
+                .await?;
         }
     }
 

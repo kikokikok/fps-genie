@@ -81,22 +81,19 @@ async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     // Initialize logging
-    let log_level = if cli.verbose { Level::DEBUG } else { Level::INFO };
-    tracing_subscriber::fmt()
-        .with_max_level(log_level)
-        .init();
+    let log_level = if cli.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
     // Set up database connections
-    let timescale_url = cli.timescale_url
-        .as_ref()
-        .unwrap_or(&cli.postgres_url);
+    let timescale_url = cli.timescale_url.as_ref().unwrap_or(&cli.postgres_url);
 
     info!("Connecting to databases...");
-    let db_manager = DatabaseManager::new(
-        &cli.postgres_url,
-        timescale_url,
-        &cli.qdrant_url,
-    ).await?;
+    let db_manager =
+        DatabaseManager::new(&cli.postgres_url, timescale_url, &cli.qdrant_url).await?;
 
     // Configure pipeline
     let config = PipelineConfig {
@@ -179,7 +176,8 @@ async fn main() -> Result<()> {
                 .await?;
             let snapshot_count: i64 = snapshot_row.get(0);
 
-            let total_size_query = "SELECT SUM(demo_file_size) FROM matches WHERE processing_status = 'completed'";
+            let total_size_query =
+                "SELECT SUM(demo_file_size) FROM matches WHERE processing_status = 'completed'";
             let size_row = sqlx::query(total_size_query)
                 .fetch_optional(&processor.db().postgres.pool)
                 .await?;
@@ -187,7 +185,10 @@ async fn main() -> Result<()> {
             if let Some(row) = size_row {
                 if let Ok(size) = row.try_get::<Option<i64>, _>(0) {
                     if let Some(size) = size {
-                        println!("Processed demo data: {:.2} GB", size as f64 / 1024.0 / 1024.0 / 1024.0);
+                        println!(
+                            "Processed demo data: {:.2} GB",
+                            size as f64 / 1024.0 / 1024.0 / 1024.0
+                        );
                     }
                 }
             }

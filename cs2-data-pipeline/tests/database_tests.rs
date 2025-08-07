@@ -1,8 +1,8 @@
 use anyhow::Result;
 use chrono::Utc;
-use uuid::Uuid;
 use cs2_data_pipeline::database::DatabaseManager;
-use cs2_data_pipeline::models::{Match, ProcessingStatus, PlayerSnapshot, BehavioralEmbedding};
+use cs2_data_pipeline::models::{BehavioralEmbedding, Match, PlayerSnapshot, ProcessingStatus};
+use uuid::Uuid;
 
 /// Integration tests for database managers
 /// These tests require running database instances
@@ -54,11 +54,18 @@ mod database_integration_tests {
 
         // Test retrieving unprocessed matches
         let pending_matches = db.postgres.get_unprocessed_matches().await?;
-        assert!(!pending_matches.is_empty(), "Should have at least one pending match");
+        assert!(
+            !pending_matches.is_empty(),
+            "Should have at least one pending match"
+        );
 
         // Test updating match status
-        db.postgres.update_match_status(&test_match.match_id, ProcessingStatus::Processing).await?;
-        db.postgres.update_match_status(&test_match.match_id, ProcessingStatus::Completed).await?;
+        db.postgres
+            .update_match_status(&test_match.match_id, ProcessingStatus::Processing)
+            .await?;
+        db.postgres
+            .update_match_status(&test_match.match_id, ProcessingStatus::Completed)
+            .await?;
 
         println!("PostgreSQL match operations test completed successfully");
         Ok(())
@@ -131,11 +138,15 @@ mod database_integration_tests {
         println!("Successfully inserted {} player snapshots", snapshots.len());
 
         // Test retrieval
-        let retrieved_snapshots = db.timescale
+        let retrieved_snapshots = db
+            .timescale
             .get_player_snapshots(snapshots[0].match_id, snapshots[0].steamid, Some(10))
             .await?;
 
-        assert!(!retrieved_snapshots.is_empty(), "Should retrieve at least one snapshot");
+        assert!(
+            !retrieved_snapshots.is_empty(),
+            "Should retrieve at least one snapshot"
+        );
         println!("Retrieved {} snapshots", retrieved_snapshots.len());
 
         println!("TimescaleDB player snapshots test completed successfully");
@@ -170,7 +181,10 @@ mod database_integration_tests {
         let query_vector: Vec<f32> = (0..512).map(|i| (i as f32) / 512.0).collect();
         let similar_behaviors = db.vector.search_similar_behaviors(&query_vector, 5).await?;
 
-        assert!(!similar_behaviors.is_empty(), "Should find similar behaviors");
+        assert!(
+            !similar_behaviors.is_empty(),
+            "Should find similar behaviors"
+        );
         println!("Found {} similar behaviors", similar_behaviors.len());
 
         println!("Qdrant vector operations test completed successfully");
@@ -204,38 +218,42 @@ mod database_integration_tests {
         println!("Created match: {}", match_uuid);
 
         // 2. Update status to processing
-        db.postgres.update_match_status(&test_match.match_id, ProcessingStatus::Processing).await?;
+        db.postgres
+            .update_match_status(&test_match.match_id, ProcessingStatus::Processing)
+            .await?;
 
         // 3. Insert player snapshots for this match
-        let snapshots: Vec<PlayerSnapshot> = (0..100).map(|i| {
-            PlayerSnapshot {
-                timestamp: Utc::now(),
-                match_id: match_uuid,
-                tick: 1000 + i,
-                steamid: 76561198000000001 + (i as i64 % 10), // Simulate 10 different players
-                round_number: ((i / 10) + 1) as i32,
-                health: 100.0 - (i as f32 * 0.5),
-                armor: 100.0 - (i as f32 * 0.3),
-                pos_x: 100.0 + (i as f32 * 2.0),
-                pos_y: 200.0 + (i as f32 * 1.5),
-                pos_z: 30.0,
-                vel_x: if i % 3 == 0 { 250.0 } else { 0.0 },
-                vel_y: 0.0,
-                vel_z: 0.0,
-                yaw: (i as f32 * 3.6) % 360.0,
-                pitch: ((i as f32 * 1.8) % 180.0) - 90.0,
-                weapon_id: 7 + (i % 5) as u16, // Different weapons
-                ammo_clip: 30 - (i % 31) as i32,
-                ammo_reserve: 120,
-                is_alive: i % 20 != 19, // Some players dead
-                is_airborne: i % 15 == 0,
-                is_scoped: i % 25 == 0,
-                is_walking: i % 3 == 0,
-                flash_duration: if i % 30 == 0 { 2.5 } else { 0.0 },
-                money: 2700 - (i as i32 * 10),
-                equipment_value: 2700 - (i as i32 * 5),
-            }
-        }).collect();
+        let snapshots: Vec<PlayerSnapshot> = (0..100)
+            .map(|i| {
+                PlayerSnapshot {
+                    timestamp: Utc::now(),
+                    match_id: match_uuid,
+                    tick: 1000 + i,
+                    steamid: 76561198000000001 + (i as i64 % 10), // Simulate 10 different players
+                    round_number: ((i / 10) + 1) as i32,
+                    health: 100.0 - (i as f32 * 0.5),
+                    armor: 100.0 - (i as f32 * 0.3),
+                    pos_x: 100.0 + (i as f32 * 2.0),
+                    pos_y: 200.0 + (i as f32 * 1.5),
+                    pos_z: 30.0,
+                    vel_x: if i % 3 == 0 { 250.0 } else { 0.0 },
+                    vel_y: 0.0,
+                    vel_z: 0.0,
+                    yaw: (i as f32 * 3.6) % 360.0,
+                    pitch: ((i as f32 * 1.8) % 180.0) - 90.0,
+                    weapon_id: 7 + (i % 5) as u16, // Different weapons
+                    ammo_clip: 30 - (i % 31) as i32,
+                    ammo_reserve: 120,
+                    is_alive: i % 20 != 19, // Some players dead
+                    is_airborne: i % 15 == 0,
+                    is_scoped: i % 25 == 0,
+                    is_walking: i % 3 == 0,
+                    flash_duration: if i % 30 == 0 { 2.5 } else { 0.0 },
+                    money: 2700 - (i as i32 * 10),
+                    equipment_value: 2700 - (i as i32 * 5),
+                }
+            })
+            .collect();
 
         db.timescale.insert_snapshots_batch(&snapshots).await?;
         println!("Inserted {} player snapshots", snapshots.len());
@@ -259,24 +277,41 @@ mod database_integration_tests {
         println!("Stored 5 behavioral embeddings");
 
         // 5. Update match status to completed
-        db.postgres.update_match_status(&test_match.match_id, ProcessingStatus::Completed).await?;
+        db.postgres
+            .update_match_status(&test_match.match_id, ProcessingStatus::Completed)
+            .await?;
 
         // 6. Verify the workflow by querying data
         let completed_matches = db.postgres.get_unprocessed_matches().await?;
-        let workflow_match_completed = completed_matches.iter()
+        let workflow_match_completed = completed_matches
+            .iter()
             .find(|m| m.match_id == test_match.match_id)
             .is_none(); // Should not be in unprocessed list
-        assert!(workflow_match_completed, "Match should be marked as completed");
+        assert!(
+            workflow_match_completed,
+            "Match should be marked as completed"
+        );
 
-        let retrieved_snapshots = db.timescale
+        let retrieved_snapshots = db
+            .timescale
             .get_player_snapshots(match_uuid, 76561198000000001, Some(50))
             .await?;
-        assert!(!retrieved_snapshots.is_empty(), "Should retrieve player snapshots");
+        assert!(
+            !retrieved_snapshots.is_empty(),
+            "Should retrieve player snapshots"
+        );
 
-        let similar_behaviors = db.vector
-            .search_similar_behaviors(&(0..512).map(|i| (i as f32) / 512.0).collect::<Vec<f32>>(), 3)
+        let similar_behaviors = db
+            .vector
+            .search_similar_behaviors(
+                &(0..512).map(|i| (i as f32) / 512.0).collect::<Vec<f32>>(),
+                3,
+            )
             .await?;
-        assert!(!similar_behaviors.is_empty(), "Should find similar behaviors");
+        assert!(
+            !similar_behaviors.is_empty(),
+            "Should find similar behaviors"
+        );
 
         println!("Full database workflow test completed successfully");
         println!("Match processed: {}", test_match.match_id);

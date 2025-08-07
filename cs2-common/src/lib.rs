@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use bytemuck::{Pod, Zeroable};
+use serde::{Deserialize, Serialize};
 
 /// Error types for CS2-related operations
 #[derive(Debug, thiserror::Error)]
@@ -53,10 +53,10 @@ pub struct InputVector {
     pub vel_z: f32,
     pub yaw: f32,
     pub pitch: f32,
-    pub weapon_id_f32: f32,  // Encoded as float for uniformity
+    pub weapon_id_f32: f32, // Encoded as float for uniformity
     pub ammo: f32,
     pub is_airborne: f32,
-    pub padding: f32,  // Ensure alignment
+    pub padding: f32, // Ensure alignment
 }
 
 /// Network output vector (C-compatible, for fast binary serialization)
@@ -164,7 +164,7 @@ mod tests {
         #[case] vel_x: f32,
         #[case] vel_y: f32,
         #[case] vel_z: f32,
-        #[case] expected_speed_3d: f32
+        #[case] expected_speed_3d: f32,
     ) {
         let mut bv = BehavioralVector::new(1, 1);
         bv.vel_x = vel_x;

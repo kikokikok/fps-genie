@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use std::time::Duration;
 use std::path::Path;
+use std::time::Duration;
 
 /// Benchmark real demo file processing
 fn benchmark_real_demo_processing(c: &mut Criterion) {
@@ -20,7 +20,10 @@ fn benchmark_real_demo_processing(c: &mut Criterion) {
             let result = cs2_ml::data::vectors_from_demo(demo_path);
             match result {
                 Ok(vectors) => {
-                    println!("Successfully parsed {} behavioral vectors from real demo", vectors.len());
+                    println!(
+                        "Successfully parsed {} behavioral vectors from real demo",
+                        vectors.len()
+                    );
                     black_box(vectors.len())
                 }
                 Err(e) => {
@@ -42,7 +45,10 @@ fn benchmark_demo_size_comparison(c: &mut Criterion) {
 
     let demo_files = [
         ("test_demo", "../test_data/test_demo.dem"),
-        ("vitality_vs_spirit", "../test_data/vitality-vs-spirit-m1-dust2.dem"),
+        (
+            "vitality_vs_spirit",
+            "../test_data/vitality-vs-spirit-m1-dust2.dem",
+        ),
     ];
 
     for (name, path) in demo_files.iter() {

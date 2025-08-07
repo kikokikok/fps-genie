@@ -9,7 +9,7 @@ pub struct PlayerMeta {
 }
 
 // Implement a conversion from a demo player to PlayerMeta
-impl<T> From<&T> for PlayerMeta 
+impl<T> From<&T> for PlayerMeta
 where
     T: PlayerLike,
 {

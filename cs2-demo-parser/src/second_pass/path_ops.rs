@@ -143,20 +143,14 @@ fn push_one_left_delta_n_right_non_zero(bitreader: &mut Bitreader, field_path: &
     Ok(())
 }
 
-fn push_one_left_delta_n_right_non_zero_pack6_bits(
-    bitreader: &mut Bitreader,
-    field_path: &mut FieldPath,
-) -> Result<(), DemoParserError> {
+fn push_one_left_delta_n_right_non_zero_pack6_bits(bitreader: &mut Bitreader, field_path: &mut FieldPath) -> Result<(), DemoParserError> {
     *field_path.get_entry_mut(field_path.last)? += (bitreader.read_nbits(3)? + 2) as i32;
     field_path.last += 1;
     *field_path.get_entry_mut(field_path.last)? = (bitreader.read_nbits(3)? + 1) as i32;
     Ok(())
 }
 
-fn push_one_left_delta_n_right_non_zero_pack8_bits(
-    bitreader: &mut Bitreader,
-    field_path: &mut FieldPath,
-) -> Result<(), DemoParserError> {
+fn push_one_left_delta_n_right_non_zero_pack8_bits(bitreader: &mut Bitreader, field_path: &mut FieldPath) -> Result<(), DemoParserError> {
     *field_path.get_entry_mut(field_path.last)? += (bitreader.read_nbits(4)? + 2) as i32;
     field_path.last += 1;
     *field_path.get_entry_mut(field_path.last)? = (bitreader.read_nbits(4)? + 1) as i32;
