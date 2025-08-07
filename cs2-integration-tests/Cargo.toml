@@ -12,11 +12,17 @@ cs2-ml = { path = "../cs2-ml" }
 tokio = { version = "1.0", features = ["full"] }
 tokio-test = "0.4"
 
-# Test containers - use blocking client
+# Test containers for integration testing
 testcontainers = { version = "0.20", features = ["blocking"] }
 
 # Database testing
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres"] }
+
+# Redis client for testing
+redis = "0.24"
+
+# HTTP client for health checks
+reqwest = { version = "0.11", features = ["json"] }
 
 # Date/time handling
 chrono = { version = "0.4", features = ["serde"] }
@@ -32,6 +38,10 @@ tempfile = "3.0"
 
 # Performance benchmarking
 criterion = { version = "0.7", features = ["html_reports"] }
+
+[features]
+default = []
+integration-tests = []
 
 [[bench]]
 name = "pipeline_performance"

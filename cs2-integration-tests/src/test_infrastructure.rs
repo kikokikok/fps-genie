@@ -101,6 +101,45 @@ impl TestDataFactory {
         }
     }
 
+    /// Create sample player snapshot data for testing
+    pub fn sample_player_snapshot() -> std::collections::HashMap<String, serde_json::Value> {
+        let mut data = std::collections::HashMap::new();
+        data.insert("steamid".to_string(), serde_json::Value::String("76561198123456789".to_string()));
+        data.insert("tick".to_string(), serde_json::Value::Number(serde_json::Number::from(1000)));
+        data.insert("pos_x".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(100.5).unwrap()));
+        data.insert("pos_y".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(200.5).unwrap()));
+        data.insert("pos_z".to_string(), serde_json::Value::Number(serde_json::Number::from_f64(64.0).unwrap()));
+        data.insert("health".to_string(), serde_json::Value::Number(serde_json::Number::from(100)));
+        data.insert("armor".to_string(), serde_json::Value::Number(serde_json::Number::from(100)));
+        data.insert("is_alive".to_string(), serde_json::Value::Bool(true));
+        data.insert("weapon_id".to_string(), serde_json::Value::Number(serde_json::Number::from(7)));
+        data
+    }
+    
+    /// Create sample match metadata for testing
+    pub fn sample_match_metadata() -> std::collections::HashMap<String, serde_json::Value> {
+        let mut data = std::collections::HashMap::new();
+        data.insert("match_id".to_string(), serde_json::Value::String(Uuid::new_v4().to_string()));
+        data.insert("map_name".to_string(), serde_json::Value::String("de_dust2".to_string()));
+        data.insert("team_a".to_string(), serde_json::Value::String("Team Alpha".to_string()));
+        data.insert("team_b".to_string(), serde_json::Value::String("Team Beta".to_string()));
+        data.insert("tournament".to_string(), serde_json::Value::String("Test Tournament".to_string()));
+        data
+    }
+
+    /// Create sample behavioral vector data for ML testing
+    pub fn sample_behavioral_vector(steamid: u64, tick: u32) -> Vec<f32> {
+        // Generate a simple behavioral vector for testing
+        vec![
+            (steamid % 1000) as f32 / 1000.0,  // Player ID component
+            (tick % 64) as f32 / 64.0,         // Tick component
+            0.5 + ((tick as f32 * 0.1).sin() * 0.3),  // Position X component
+            0.5 + ((tick as f32 * 0.05).cos() * 0.3), // Position Y component
+            ((tick % 100) as f32) / 100.0,     // Health component
+            ((tick % 150) as f32) / 150.0,     // Armor component
+        ]
+    }
+
     /// Create a set of professional player steamids for testing
     pub fn pro_player_steamids() -> Vec<u64> {
         vec![
