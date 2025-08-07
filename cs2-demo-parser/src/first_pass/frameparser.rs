@@ -158,12 +158,7 @@ impl FrameParser {
         Ok(())
     }
 
-    pub fn start(
-        demo_bytes: &[u8],
-        start: usize,
-        end: usize,
-        sender: Sender<StartEndOffset>,
-    ) -> Result<Vec<StartEndOffset>, DemoParserError> {
+    pub fn start(demo_bytes: &[u8], start: usize, end: usize, sender: Sender<StartEndOffset>) -> Result<Vec<StartEndOffset>, DemoParserError> {
         if start == end {
             return Ok(vec![]);
         }

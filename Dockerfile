@@ -1,15 +1,10 @@
 # Multi-stage build for CS2 Demo Analysis Tools
-FROM rust:1.75 as builder
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    pkg-config \
-    libssl-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Use our custom base image with all dependencies pre-installed
+FROM ghcr.io/kikokikok/fps-genie-ci-base:latest as builder
 
 WORKDIR /app
 
-# Copy manifests
+# Copy manifests first for better layer caching
 COPY Cargo.toml Cargo.lock ./
 COPY cs2-analytics/Cargo.toml cs2-analytics/
 COPY cs2-client/Cargo.toml cs2-client/
@@ -21,10 +16,30 @@ COPY cs2-integration-tests/Cargo.toml cs2-integration-tests/
 COPY cs2-ml/Cargo.toml cs2-ml/
 COPY csgoproto/Cargo.toml csgoproto/
 
-# Copy source code
+# Create dummy source files to cache dependencies
+RUN mkdir -p cs2-analytics/src cs2-client/src cs2-common/src cs2-data-pipeline/src \
+    cs2-demo-analyzer/src cs2-demo-parser/src cs2-integration-tests/src \
+    cs2-ml/src csgoproto/src && \
+    echo "fn main() {}" > cs2-analytics/src/main.rs && \
+    echo "fn main() {}" > cs2-data-pipeline/src/main.rs && \
+    echo "fn main() {}" > cs2-demo-analyzer/src/main.rs && \
+    echo "fn main() {}" > cs2-ml/src/main.rs && \
+    echo "fn main() {}" > csgoproto/src/main.rs && \
+    echo "// dummy" > cs2-client/src/lib.rs && \
+    echo "// dummy" > cs2-common/src/lib.rs && \
+    echo "// dummy" > cs2-demo-parser/src/lib.rs && \
+    echo "// dummy" > cs2-integration-tests/src/lib.rs
+
+# Build dependencies (cached layer)
+RUN cargo build --release --workspace
+
+# Copy actual source code
 COPY . .
 
-# Build for release
+# Touch source files to force rebuild of app code only
+RUN find . -name "*.rs" -exec touch {} +
+
+# Build for release with all dependencies cached
 RUN cargo build --release --workspace
 
 # Runtime image

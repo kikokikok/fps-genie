@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
-use clap::{Parser, Subcommand};
 use anyhow::Result;
-use polars::prelude::*;
-use plotters::prelude::*;
+use clap::{Parser, Subcommand};
 use cs2_common::BehavioralVector;
+use plotters::prelude::*;
+use polars::prelude::*;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 /// CS2 Demo Analyzer - Visualize and analyze CS2 demo files
@@ -91,24 +91,40 @@ fn main() -> Result<()> {
             generate_player_movement_chart(&vectors, &output_dir.join("movement.png"))?;
             generate_aim_patterns_chart(&vectors, &output_dir.join("aim.png"))?;
 
-            info!("Analysis complete. Results saved to {}", output_dir.display());
-        },
-        Commands::Compare { parquet_files, output } => {
+            info!(
+                "Analysis complete. Results saved to {}",
+                output_dir.display()
+            );
+        }
+        Commands::Compare {
+            parquet_files,
+            output,
+        } => {
             info!("Comparing {} parquet files", parquet_files.len());
 
             // Load datasets
             let mut datasets = Vec::new();
             for path in &parquet_files {
                 let df = ParquetReader::new(std::fs::File::open(path)?).finish()?;
-                datasets.push((path.file_stem().unwrap_or_default().to_string_lossy().to_string(), df));
+                datasets.push((
+                    path.file_stem()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string(),
+                    df,
+                ));
             }
 
             // Generate comparison chart
             compare_datasets(&datasets, &output)?;
 
             info!("Comparison complete. Chart saved to {}", output.display());
-        },
-        Commands::Visualize { parquet, output, type_ } => {
+        }
+        Commands::Visualize {
+            parquet,
+            output,
+            type_,
+        } => {
             info!("Visualizing data from {}", parquet.display());
 
             // Load vectors from parquet
@@ -117,27 +133,30 @@ fn main() -> Result<()> {
             match type_.as_str() {
                 "movement" => {
                     generate_movement_visualization(&df, &output)?;
-                },
+                }
                 "aim" => {
                     generate_aim_visualization(&df, &output)?;
-                },
+                }
                 "both" | _ => {
-                    let movement_output = output.with_file_name(
-                        format!("{}_movement.png",
-                                output.file_stem().unwrap_or_default().to_string_lossy())
-                    );
-                    let aim_output = output.with_file_name(
-                        format!("{}_aim.png",
-                                output.file_stem().unwrap_or_default().to_string_lossy())
-                    );
+                    let movement_output = output.with_file_name(format!(
+                        "{}_movement.png",
+                        output.file_stem().unwrap_or_default().to_string_lossy()
+                    ));
+                    let aim_output = output.with_file_name(format!(
+                        "{}_aim.png",
+                        output.file_stem().unwrap_or_default().to_string_lossy()
+                    ));
 
                     generate_movement_visualization(&df, &movement_output)?;
                     generate_aim_visualization(&df, &aim_output)?;
-                },
+                }
             }
 
-            info!("Visualization complete. Output saved to {}", output.display());
-        },
+            info!(
+                "Visualization complete. Output saved to {}",
+                output.display()
+            );
+        }
     }
 
     Ok(())
@@ -146,7 +165,8 @@ fn main() -> Result<()> {
 /// Generate basic statistics about the behavioral vectors
 fn generate_statistics(vectors: &[BehavioralVector], output_dir: &Path) -> Result<()> {
     // Extract player statistics
-    let player_ids: Vec<_> = vectors.iter()
+    let player_ids: Vec<_> = vectors
+        .iter()
         .map(|v| v.steamid)
         .collect::<std::collections::HashSet<_>>()
         .into_iter()
@@ -156,17 +176,17 @@ fn generate_statistics(vectors: &[BehavioralVector], output_dir: &Path) -> Resul
 
     // For each player, calculate statistics
     for player_id in player_ids {
-        let player_vectors: Vec<_> = vectors.iter()
-            .filter(|v| v.steamid == player_id)
-            .collect();
+        let player_vectors: Vec<_> = vectors.iter().filter(|v| v.steamid == player_id).collect();
 
         if player_vectors.is_empty() {
             continue;
         }
 
         // Calculate basic statistics
-        let avg_delta_yaw = player_vectors.iter().map(|v| v.delta_yaw).sum::<f32>() / player_vectors.len() as f32;
-        let avg_delta_pitch = player_vectors.iter().map(|v| v.delta_pitch).sum::<f32>() / player_vectors.len() as f32;
+        let avg_delta_yaw =
+            player_vectors.iter().map(|v| v.delta_yaw).sum::<f32>() / player_vectors.len() as f32;
+        let avg_delta_pitch =
+            player_vectors.iter().map(|v| v.delta_pitch).sum::<f32>() / player_vectors.len() as f32;
 
         // Write statistics to a file
         let stats_path = output_dir.join(format!("player_{}_stats.txt", player_id));
@@ -200,11 +220,13 @@ fn generate_player_movement_chart(vectors: &[BehavioralVector], output_path: &Pa
 
     // Draw player positions
     // In real implementation, filter by player and tick range
-    chart.draw_series(
-        vectors.iter().take(1000).map(|v| {
-            Circle::new((v.pos_x as f64, v.pos_y as f64), 2, RGBColor(0, 0, 255).filled())
-        })
-    )?;
+    chart.draw_series(vectors.iter().take(1000).map(|v| {
+        Circle::new(
+            (v.pos_x as f64, v.pos_y as f64),
+            2,
+            RGBColor(0, 0, 255).filled(),
+        )
+    }))?;
 
     root.present()?;
     info!("Player movement chart saved to {}", output_path.display());
@@ -226,11 +248,13 @@ fn generate_aim_patterns_chart(vectors: &[BehavioralVector], output_path: &Path)
 
     chart.configure_mesh().draw()?;
 
-    chart.draw_series(
-        vectors.iter().take(1000).map(|v| {
-            Circle::new((v.delta_yaw as f64, v.delta_pitch as f64), 2, RGBColor(255, 0, 0).filled())
-        })
-    )?;
+    chart.draw_series(vectors.iter().take(1000).map(|v| {
+        Circle::new(
+            (v.delta_yaw as f64, v.delta_pitch as f64),
+            2,
+            RGBColor(255, 0, 0).filled(),
+        )
+    }))?;
 
     root.present()?;
     info!("Aim patterns chart saved to {}", output_path.display());
@@ -255,10 +279,12 @@ fn compare_datasets(datasets: &[(String, DataFrame)], output_path: &Path) -> Res
 
     for (i, (name, _)) in datasets.iter().enumerate() {
         let i_f64 = i as f64 / datasets.len() as f64;
-        chart.draw_series(std::iter::once(
-            Rectangle::new([(i_f64, 0.0), (i_f64 + 0.1, 5.0)], RGBColor(30 * i as u8, 144, 255).filled())
-        ))?
-        .label(name.clone());
+        chart
+            .draw_series(std::iter::once(Rectangle::new(
+                [(i_f64, 0.0), (i_f64 + 0.1, 5.0)],
+                RGBColor(30 * i as u8, 144, 255).filled(),
+            )))?
+            .label(name.clone());
     }
 
     chart.configure_series_labels().draw()?;
@@ -276,7 +302,10 @@ fn generate_movement_visualization(_df: &DataFrame, output_path: &Path) -> Resul
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Player Movement from DataFrame", ("sans-serif", 30).into_font())
+        .caption(
+            "Player Movement from DataFrame",
+            ("sans-serif", 30).into_font(),
+        )
         .margin(10)
         .x_label_area_size(30)
         .y_label_area_size(30)
@@ -300,7 +329,10 @@ fn generate_aim_visualization(_df: &DataFrame, output_path: &Path) -> Result<()>
     root.fill(&WHITE)?;
 
     let mut chart = ChartBuilder::on(&root)
-        .caption("Aim Patterns from DataFrame", ("sans-serif", 30).into_font())
+        .caption(
+            "Aim Patterns from DataFrame",
+            ("sans-serif", 30).into_font(),
+        )
         .margin(10)
         .x_label_area_size(30)
         .y_label_area_size(30)

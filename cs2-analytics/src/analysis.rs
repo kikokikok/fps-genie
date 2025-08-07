@@ -41,7 +41,10 @@ impl AdvancedAnalytics {
         pro_players: Option<String>,
         detailed: bool,
     ) -> Result<()> {
-        info!("🆚 Comparing player {} with professional players", player_steamid);
+        info!(
+            "🆚 Comparing player {} with professional players",
+            player_steamid
+        );
 
         // TODO: Implement pro comparison algorithm
         // 1. Extract player's behavioral patterns from database
@@ -58,8 +61,15 @@ impl AdvancedAnalytics {
         Ok(())
     }
 
-    async fn analyze_playstyles(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
-        info!("🎭 Analyzing playstyles for matches: {:?}, players: {:?}", matches, players);
+    async fn analyze_playstyles(
+        &self,
+        matches: Option<String>,
+        players: Option<String>,
+    ) -> Result<()> {
+        info!(
+            "🎭 Analyzing playstyles for matches: {:?}, players: {:?}",
+            matches, players
+        );
 
         // TODO: Implement playstyle analysis
         // 1. Cluster players by movement patterns
@@ -70,7 +80,11 @@ impl AdvancedAnalytics {
         Ok(())
     }
 
-    async fn analyze_positioning(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+    async fn analyze_positioning(
+        &self,
+        matches: Option<String>,
+        players: Option<String>,
+    ) -> Result<()> {
         info!("📍 Analyzing positioning patterns");
 
         // TODO: Implement positioning analysis
@@ -82,7 +96,11 @@ impl AdvancedAnalytics {
         Ok(())
     }
 
-    async fn analyze_economy(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+    async fn analyze_economy(
+        &self,
+        matches: Option<String>,
+        players: Option<String>,
+    ) -> Result<()> {
         info!("💰 Analyzing economic decisions");
 
         // TODO: Implement economy analysis
@@ -94,7 +112,11 @@ impl AdvancedAnalytics {
         Ok(())
     }
 
-    async fn analyze_clutch_performance(&self, matches: Option<String>, players: Option<String>) -> Result<()> {
+    async fn analyze_clutch_performance(
+        &self,
+        matches: Option<String>,
+        players: Option<String>,
+    ) -> Result<()> {
         info!("🔥 Analyzing clutch performance");
 
         // TODO: Implement clutch analysis

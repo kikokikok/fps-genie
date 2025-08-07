@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
 use cs2_common::BehavioralVector;
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Match metadata stored in relational database
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -131,7 +131,7 @@ pub struct BehavioralEmbedding {
 impl From<BehavioralVector> for PlayerSnapshot {
     fn from(bv: BehavioralVector) -> Self {
         PlayerSnapshot {
-            timestamp: Utc::now(), // Will be set properly during processing
+            timestamp: Utc::now(),    // Will be set properly during processing
             match_id: Uuid::new_v4(), // Will be set properly during processing
             tick: bv.tick,
             steamid: bv.steamid as i64,
@@ -149,13 +149,13 @@ impl From<BehavioralVector> for PlayerSnapshot {
             weapon_id: bv.weapon_id,
             ammo_clip: bv.ammo as i32,
             ammo_reserve: 0, // Not available in BehavioralVector
-            is_alive: true, // Will be determined during processing
+            is_alive: true,  // Will be determined during processing
             is_airborne: bv.is_airborne > 0.5,
-            is_scoped: false, // Not available in BehavioralVector
-            is_walking: false, // Not available in BehavioralVector
+            is_scoped: false,    // Not available in BehavioralVector
+            is_walking: false,   // Not available in BehavioralVector
             flash_duration: 0.0, // Not available in BehavioralVector
-            money: 0, // Will be extracted during processing
-            equipment_value: 0, // Will be calculated during processing
+            money: 0,            // Will be extracted during processing
+            equipment_value: 0,  // Will be calculated during processing
         }
     }
 }

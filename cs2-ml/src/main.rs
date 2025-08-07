@@ -3,8 +3,8 @@ use std::path::PathBuf;
 
 mod data;
 mod model;
-mod server;
 mod player;
+mod server;
 
 #[derive(Parser)]
 #[command(name = "cs2-ml")]
@@ -40,17 +40,26 @@ fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
     let cli = Cli::parse();
     match cli.command {
-        Commands::Prepare { demo_glob, output_dir } => {
+        Commands::Prepare {
+            demo_glob,
+            output_dir,
+        } => {
             std::fs::create_dir_all(&output_dir)?;
             for entry in glob::glob(&demo_glob)? {
                 let demo = entry?;
                 let vecs = data::vectors_from_demo(&demo)?;
-                let out = output_dir.join(demo.file_stem().unwrap()).with_extension("parquet");
+                let out = output_dir
+                    .join(demo.file_stem().unwrap())
+                    .with_extension("parquet");
                 data::write_parquet(&vecs, &out)?;
                 println!("Wrote {}", out.display());
             }
         }
-        Commands::Train { parquet, model_out, epochs: _ } => {
+        Commands::Train {
+            parquet,
+            model_out,
+            epochs: _,
+        } => {
             use parquet::file::reader::SerializedFileReader;
             use parquet::record::reader::RowIter;
             use parquet::record::RowAccessor;
@@ -60,12 +69,10 @@ fn main() -> anyhow::Result<()> {
             let mut dataset = Vec::new();
             for row_result in row_iter {
                 let row = row_result?;
-                let vec: Vec<f32> = (0..14)
-                    .map(|i| row.get_double(i).unwrap() as f32)
-                    .collect();
+                let vec: Vec<f32> = (0..14).map(|i| row.get_double(i).unwrap() as f32).collect();
                 let label = vec![
                     row.get_double(14).unwrap() as f32,
-                    row.get_double(15).unwrap() as f32
+                    row.get_double(15).unwrap() as f32,
                 ];
                 dataset.push((vec, label));
             }

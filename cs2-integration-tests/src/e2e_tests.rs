@@ -1,15 +1,15 @@
-use crate::test_infrastructure::{TestInfrastructure, TestDataFactory};
+use crate::test_infrastructure::{TestDataFactory, TestInfrastructure};
 
 /// End-to-end tests for the complete demo processing pipeline
 #[cfg(test)]
 mod e2e_pipeline_tests {
     use super::*;
     use anyhow::Result;
+    use cs2_data_pipeline::models::ProcessingStatus;
     use std::time::Duration;
     use tokio::time::timeout;
     use tracing::{info, warn};
     use uuid::Uuid;
-    use cs2_data_pipeline::models::ProcessingStatus;
 
     #[tokio::test]
     async fn test_complete_demo_processing_pipeline() -> Result<()> {
@@ -31,7 +31,11 @@ mod e2e_pipeline_tests {
             info!("✅ Registered demo with ID: {}", match_id);
 
             // Verify it was registered in database
-            let unprocessed = infra.db_manager().postgres.get_unprocessed_matches().await?;
+            let unprocessed = infra
+                .db_manager()
+                .postgres
+                .get_unprocessed_matches()
+                .await?;
             assert!(!unprocessed.is_empty(), "Should have unprocessed matches");
             assert_eq!(unprocessed[0].processing_status, ProcessingStatus::Pending);
         }
@@ -39,15 +43,20 @@ mod e2e_pipeline_tests {
         // Test 2: Full pipeline processing
         let result = timeout(
             Duration::from_secs(120), // 2 minute timeout for processing
-            processor.process_pending_matches()
-        ).await;
+            processor.process_pending_matches(),
+        )
+        .await;
 
         match result {
             Ok(Ok(())) => {
                 info!("✅ Pipeline processing completed successfully");
 
                 // Verify processing status was updated
-                let _processed = infra.db_manager().postgres.get_unprocessed_matches().await?;
+                let _processed = infra
+                    .db_manager()
+                    .postgres
+                    .get_unprocessed_matches()
+                    .await?;
                 // Should be empty or have status updated to completed/failed
             }
             Ok(Err(e)) => {
@@ -59,7 +68,7 @@ mod e2e_pipeline_tests {
                 // This is also acceptable for integration testing
             }
         }
-        
+
         Ok(())
     }
 
@@ -69,16 +78,26 @@ mod e2e_pipeline_tests {
 
         // Test 1: Match operations
         let test_match = TestDataFactory::create_test_match("test_match_001");
-        let match_id = infra.db_manager().postgres.insert_match(&test_match).await?;
+        let match_id = infra
+            .db_manager()
+            .postgres
+            .insert_match(&test_match)
+            .await?;
         info!("✅ Inserted test match: {}", match_id);
 
         // Test 2: Player snapshots batch insert
         let snapshots = TestDataFactory::create_player_snapshots(match_id, 100, 5);
-        infra.db_manager().timescale.insert_snapshots_batch(&snapshots).await?;
+        infra
+            .db_manager()
+            .timescale
+            .insert_snapshots_batch(&snapshots)
+            .await?;
         info!("✅ Inserted {} player snapshots", snapshots.len());
 
         // Test 3: Query player snapshots
-        let snapshots_result = infra.db_manager().timescale
+        let snapshots_result = infra
+            .db_manager()
+            .timescale
             .get_player_snapshots(match_id, 76561198034202275, Some(50))
             .await?;
         info!("✅ Retrieved {} player snapshots", snapshots_result.len());
@@ -94,15 +113,21 @@ mod e2e_pipeline_tests {
             metadata: serde_json::json!({"test": true}),
         };
 
-        infra.db_manager().vector.store_behavioral_vector(&embedding).await?;
+        infra
+            .db_manager()
+            .vector
+            .store_behavioral_vector(&embedding)
+            .await?;
         info!("✅ Inserted behavioral embedding");
 
         // Search for similar behaviors
-        let similar = infra.db_manager().vector
+        let similar = infra
+            .db_manager()
+            .vector
             .search_similar_behaviors(&embedding.vector, 5)
             .await?;
         info!("✅ Found {} similar behaviors", similar.len());
-        
+
         Ok(())
     }
 
@@ -115,7 +140,10 @@ mod e2e_pipeline_tests {
             .map(|i| TestDataFactory::create_behavioral_vector(76561198034202275, i))
             .collect();
 
-        info!("📊 Created {} behavioral vectors for ML testing", behavioral_vectors.len());
+        info!(
+            "📊 Created {} behavioral vectors for ML testing",
+            behavioral_vectors.len()
+        );
 
         // Test data conversion to ML format
         let snapshots: Vec<_> = behavioral_vectors
@@ -143,7 +171,7 @@ mod e2e_pipeline_tests {
                 // This might fail if arrow/parquet dependencies have issues
             }
         }
-        
+
         Ok(())
     }
 }
@@ -159,19 +187,35 @@ mod performance_tests {
         let infra = TestInfrastructure::new().await.unwrap();
 
         let test_match = TestDataFactory::create_test_match("perf_test_001");
-        let match_id = infra.db_manager().postgres.insert_match(&test_match).await.unwrap();
+        let match_id = infra
+            .db_manager()
+            .postgres
+            .insert_match(&test_match)
+            .await
+            .unwrap();
 
         // Test large batch insert
         let start = std::time::Instant::now();
         let large_batch = TestDataFactory::create_player_snapshots(match_id, 10000, 10);
 
-        infra.db_manager().timescale.insert_snapshots_batch(&large_batch).await.unwrap();
+        infra
+            .db_manager()
+            .timescale
+            .insert_snapshots_batch(&large_batch)
+            .await
+            .unwrap();
 
         let duration = start.elapsed();
         let throughput = large_batch.len() as f64 / duration.as_secs_f64();
 
-        info!("📈 Batch insert performance: {:.0} snapshots/second", throughput);
-        assert!(throughput > 1000.0, "Should process at least 1000 snapshots/second");
+        info!(
+            "📈 Batch insert performance: {:.0} snapshots/second",
+            throughput
+        );
+        assert!(
+            throughput > 1000.0,
+            "Should process at least 1000 snapshots/second"
+        );
     }
 
     #[tokio::test]
@@ -186,29 +230,44 @@ mod performance_tests {
         // Insert all matches
         let mut match_ids = Vec::new();
         for test_match in &matches {
-            let match_id = infra.db_manager().postgres.insert_match(test_match).await.unwrap();
+            let match_id = infra
+                .db_manager()
+                .postgres
+                .insert_match(test_match)
+                .await
+                .unwrap();
             match_ids.push(match_id);
         }
 
         // Process concurrently
         let start = std::time::Instant::now();
 
-        let tasks: Vec<_> = match_ids.into_iter().map(|match_id| {
-            let db = infra.db_manager().clone();
-            tokio::spawn(async move {
-                let snapshots = TestDataFactory::create_player_snapshots(match_id, 1000, 5);
-                db.timescale.insert_snapshots_batch(&snapshots).await
+        let tasks: Vec<_> = match_ids
+            .into_iter()
+            .map(|match_id| {
+                let db = infra.db_manager().clone();
+                tokio::spawn(async move {
+                    let snapshots = TestDataFactory::create_player_snapshots(match_id, 1000, 5);
+                    db.timescale.insert_snapshots_batch(&snapshots).await
+                })
             })
-        }).collect();
+            .collect();
 
         let results = futures::future::join_all(tasks).await;
         let duration = start.elapsed();
 
         let successful_tasks = results.iter().filter(|r| r.is_ok()).count();
-        info!("📊 Concurrent processing: {}/{} tasks completed in {:?}",
-              successful_tasks, results.len(), duration);
+        info!(
+            "📊 Concurrent processing: {}/{} tasks completed in {:?}",
+            successful_tasks,
+            results.len(),
+            duration
+        );
 
-        assert!(successful_tasks >= 3, "Most concurrent tasks should succeed");
+        assert!(
+            successful_tasks >= 3,
+            "Most concurrent tasks should succeed"
+        );
     }
 }
 
@@ -216,9 +275,9 @@ mod performance_tests {
 #[cfg(test)]
 mod api_integration_tests {
     use super::*;
-    use tracing::{info, warn};
     use std::time::Duration;
     use tokio::time::timeout;
+    use tracing::{info, warn};
 
     #[tokio::test]
     async fn test_ml_server_integration() {
@@ -251,8 +310,9 @@ mod api_integration_tests {
                     // Try processing (with timeout since real demos can be large)
                     let result = timeout(
                         Duration::from_secs(180),
-                        processor.process_pending_matches()
-                    ).await;
+                        processor.process_pending_matches(),
+                    )
+                    .await;
 
                     match result {
                         Ok(Ok(())) => info!("✅ Real demo processed successfully"),
@@ -265,7 +325,10 @@ mod api_integration_tests {
                 }
             }
         } else {
-            info!("⚠️ No real demo file found at {}, skipping test", test_demo_path);
+            info!(
+                "⚠️ No real demo file found at {}, skipping test",
+                test_demo_path
+            );
         }
     }
 }

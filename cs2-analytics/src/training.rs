@@ -48,7 +48,10 @@ impl TrainingPipeline {
     }
 
     async fn train_crosshair_model(&self, epochs: usize) -> Result<()> {
-        info!("🎯 Training crosshair placement model for {} epochs", epochs);
+        info!(
+            "🎯 Training crosshair placement model for {} epochs",
+            epochs
+        );
 
         // TODO: Implement crosshair placement training
         // 1. Extract aim trajectories and target information

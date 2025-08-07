@@ -133,7 +133,7 @@ SELECT add_continuous_aggregate_policy('daily_player_stats',
 EOF
 
 echo "📦 Starting database infrastructure..."
-docker-compose up -d
+docker compose up -d
 
 echo "⏳ Waiting for databases to be ready..."
 sleep 10
@@ -142,7 +142,7 @@ sleep 10
 echo "🔍 Testing database connections..."
 
 # Test PostgreSQL/TimescaleDB
-if docker-compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT version();" > /dev/null 2>&1; then
+if docker compose exec -T postgres psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT version();" > /dev/null 2>&1; then
     echo "✅ PostgreSQL/TimescaleDB: Connected"
 else
     echo "❌ PostgreSQL/TimescaleDB: Connection failed"
@@ -158,7 +158,7 @@ else
 fi
 
 # Test Redis
-if docker-compose exec -T redis redis-cli ping | grep -q PONG; then
+if docker compose exec -T redis redis-cli ping | grep -q PONG; then
     echo "✅ Redis: Connected"
 else
     echo "❌ Redis: Connection failed"

@@ -3,9 +3,9 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 use tokio::fs;
 
-use cs2_data_pipeline::pipeline::{DemoProcessor, PipelineConfig};
 use cs2_data_pipeline::database::DatabaseManager;
 use cs2_data_pipeline::models::ProcessingStatus;
+use cs2_data_pipeline::pipeline::{DemoProcessor, PipelineConfig};
 
 #[cfg(test)]
 mod pipeline_tests {
@@ -74,11 +74,22 @@ mod pipeline_tests {
         // Test demo discovery
         let discovered_demos = processor.discover_demos().await?;
 
-        assert_eq!(discovered_demos.len(), 2, "Should discover exactly 2 .dem files");
-        assert!(discovered_demos.iter().any(|p| p.file_name().unwrap() == "match1.dem"));
-        assert!(discovered_demos.iter().any(|p| p.file_name().unwrap() == "match2.dem"));
+        assert_eq!(
+            discovered_demos.len(),
+            2,
+            "Should discover exactly 2 .dem files"
+        );
+        assert!(discovered_demos
+            .iter()
+            .any(|p| p.file_name().unwrap() == "match1.dem"));
+        assert!(discovered_demos
+            .iter()
+            .any(|p| p.file_name().unwrap() == "match2.dem"));
 
-        println!("Demo discovery test passed - found {} demo files", discovered_demos.len());
+        println!(
+            "Demo discovery test passed - found {} demo files",
+            discovered_demos.len()
+        );
         Ok(())
     }
 
@@ -88,7 +99,11 @@ mod pipeline_tests {
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create a mock demo file
-        let demo_path = create_mock_demo_file(&config.demo_directory, "tournament_teamA_vs_teamB_de_dust2_2024.dem").await?;
+        let demo_path = create_mock_demo_file(
+            &config.demo_directory,
+            "tournament_teamA_vs_teamB_de_dust2_2024.dem",
+        )
+        .await?;
 
         // Test demo registration
         let match_id = processor.register_demo(&demo_path).await?;
@@ -96,7 +111,8 @@ mod pipeline_tests {
 
         // Verify the demo was registered in the database
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
-        let registered_match = pending_matches.iter()
+        let registered_match = pending_matches
+            .iter()
             .find(|m| m.match_id == "tournament_teamA_vs_teamB_de_dust2_2024")
             .expect("Should find the registered match");
 
@@ -104,7 +120,10 @@ mod pipeline_tests {
         assert_eq!(registered_match.team1, "teamA");
         assert_eq!(registered_match.team2, "teamB"); // Note: should skip "vs"
         assert_eq!(registered_match.map_name, "de_dust2");
-        assert_eq!(registered_match.processing_status, ProcessingStatus::Pending);
+        assert_eq!(
+            registered_match.processing_status,
+            ProcessingStatus::Pending
+        );
         assert_eq!(registered_match.demo_file_size, 1024); // Our mock file size
 
         println!("Demo registration test passed");
@@ -122,7 +141,8 @@ mod pipeline_tests {
         let match_id = processor.register_demo(&demo_path).await?;
 
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
-        let registered_match = pending_matches.iter()
+        let registered_match = pending_matches
+            .iter()
             .find(|m| m.match_id == "simple_demo")
             .expect("Should find the registered match");
 
@@ -159,15 +179,23 @@ mod pipeline_tests {
         // Register all discovered demos
         for demo_path in discovered_demos {
             let match_id = processor.register_demo(&demo_path).await?;
-            println!("Registered demo: {:?} with ID: {}", demo_path.file_name(), match_id);
+            println!(
+                "Registered demo: {:?} with ID: {}",
+                demo_path.file_name(),
+                match_id
+            );
         }
 
         // Verify all demos were registered
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
-        assert!(pending_matches.len() >= 3, "Should have at least 3 pending matches");
+        assert!(
+            pending_matches.len() >= 3,
+            "Should have at least 3 pending matches"
+        );
 
         // Check specific matches were registered correctly
-        let navi_match = pending_matches.iter()
+        let navi_match = pending_matches
+            .iter()
             .find(|m| m.match_id == "esl_navi_vs_astralis_de_inferno_2024")
             .expect("Should find NAVI vs Astralis match");
         assert_eq!(navi_match.tournament, Some("esl".to_string()));
@@ -175,7 +203,8 @@ mod pipeline_tests {
         assert_eq!(navi_match.team2, "astralis");
         assert_eq!(navi_match.map_name, "de_inferno");
 
-        let g2_match = pending_matches.iter()
+        let g2_match = pending_matches
+            .iter()
             .find(|m| m.match_id == "blast_g2_vs_vitality_de_mirage_2024")
             .expect("Should find G2 vs Vitality match");
         assert_eq!(g2_match.tournament, Some("blast".to_string()));
@@ -183,7 +212,10 @@ mod pipeline_tests {
         assert_eq!(g2_match.team2, "vitality");
         assert_eq!(g2_match.map_name, "de_mirage");
 
-        println!("Pipeline workflow test passed - processed {} matches", pending_matches.len());
+        println!(
+            "Pipeline workflow test passed - processed {} matches",
+            pending_matches.len()
+        );
         Ok(())
     }
 
@@ -197,18 +229,33 @@ mod pipeline_tests {
         let match_id = processor.register_demo(&demo_path).await?;
 
         // Test status progression: Pending -> Processing -> Completed
-        processor.db().postgres.update_match_status("status_test", ProcessingStatus::Processing).await?;
+        processor
+            .db()
+            .postgres
+            .update_match_status("status_test", ProcessingStatus::Processing)
+            .await?;
 
         // Verify it's no longer in unprocessed matches
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
         let still_pending = pending_matches.iter().any(|m| m.match_id == "status_test");
-        assert!(!still_pending, "Match should not be in pending list when processing");
+        assert!(
+            !still_pending,
+            "Match should not be in pending list when processing"
+        );
 
         // Update to completed
-        processor.db().postgres.update_match_status("status_test", ProcessingStatus::Completed).await?;
+        processor
+            .db()
+            .postgres
+            .update_match_status("status_test", ProcessingStatus::Completed)
+            .await?;
 
         // Test failed status as well
-        processor.db().postgres.update_match_status("status_test", ProcessingStatus::Failed).await?;
+        processor
+            .db()
+            .postgres
+            .update_match_status("status_test", ProcessingStatus::Failed)
+            .await?;
 
         println!("Match status updates test passed");
         Ok(())
@@ -230,10 +277,15 @@ mod pipeline_tests {
 
         // Should only have one match in the database
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
-        let duplicate_matches: Vec<_> = pending_matches.iter()
+        let duplicate_matches: Vec<_> = pending_matches
+            .iter()
             .filter(|m| m.match_id == "duplicate_test")
             .collect();
-        assert_eq!(duplicate_matches.len(), 1, "Should only have one match record");
+        assert_eq!(
+            duplicate_matches.len(),
+            1,
+            "Should only have one match record"
+        );
 
         println!("Duplicate demo registration test passed");
         Ok(())
@@ -281,7 +333,8 @@ mod pipeline_tests {
 
         // Verify all were registered
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
-        let perf_test_matches: Vec<_> = pending_matches.iter()
+        let perf_test_matches: Vec<_> = pending_matches
+            .iter()
             .filter(|m| m.match_id.starts_with("perf_test_"))
             .collect();
         assert_eq!(perf_test_matches.len(), demo_count);

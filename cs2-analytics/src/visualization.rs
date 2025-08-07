@@ -29,7 +29,10 @@ impl AnalyticsVisualizer {
     }
 
     async fn generate_heatmap(&self, input_path: &PathBuf) -> Result<()> {
-        info!("🗺️ Generating position heatmaps from data: {}", input_path.display());
+        info!(
+            "🗺️ Generating position heatmaps from data: {}",
+            input_path.display()
+        );
 
         let output_path = self.output_dir.join("heatmaps");
         tokio::fs::create_dir_all(&output_path).await?;

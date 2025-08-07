@@ -1,7 +1,7 @@
-use std::net::{TcpStream, ToSocketAddrs};
-use std::io::{Read, Write};
-use cs2_common::{InputVector, OutputVector, CS2Error};
 use anyhow::Result;
+use cs2_common::{CS2Error, InputVector, OutputVector};
+use std::io::{Read, Write};
+use std::net::{TcpStream, ToSocketAddrs};
 
 /// A client for connecting to the CS2 ML policy server
 pub struct PolicyClient {
@@ -11,8 +11,9 @@ pub struct PolicyClient {
 impl PolicyClient {
     /// Connect to a policy server at the given address
     pub fn connect(addr: impl ToSocketAddrs) -> Result<Self> {
-        let connection = TcpStream::connect(addr)
-            .map_err(|e| CS2Error::NetworkError(format!("Failed to connect to policy server: {}", e)))?;
+        let connection = TcpStream::connect(addr).map_err(|e| {
+            CS2Error::NetworkError(format!("Failed to connect to policy server: {}", e))
+        })?;
 
         // Set non-blocking mode
         connection.set_nonblocking(false)?;
@@ -24,12 +25,14 @@ impl PolicyClient {
     pub fn predict(&mut self, input: &InputVector) -> Result<OutputVector> {
         // Convert to bytes and send
         let input_bytes: &[u8] = bytemuck::bytes_of(input);
-        self.connection.write_all(input_bytes)
+        self.connection
+            .write_all(input_bytes)
             .map_err(|e| CS2Error::NetworkError(format!("Failed to send input: {}", e)))?;
 
         // Read response
         let mut output_bytes = [0u8; std::mem::size_of::<OutputVector>()];
-        self.connection.read_exact(&mut output_bytes)
+        self.connection
+            .read_exact(&mut output_bytes)
             .map_err(|e| CS2Error::NetworkError(format!("Failed to read prediction: {}", e)))?;
 
         // Convert back to OutputVector
@@ -87,12 +90,12 @@ impl AIController {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread;
-    use std::io::{Read, Write};
-    use std::net::{TcpListener, SocketAddr};
-    use std::time::Duration;
     use cs2_common::{InputVector, OutputVector};
+    use std::io::{Read, Write};
+    use std::net::{SocketAddr, TcpListener};
     use std::sync::{Arc, Mutex};
+    use std::thread;
+    use std::time::Duration;
 
     // A mock policy server for testing
     struct MockPolicyServer {
@@ -205,14 +208,14 @@ mod tests {
         let mut controller = AIController::new(server.addr).unwrap();
 
         let result = controller.get_aim_adjustment(
-            100.0,           // health
-            0.0,             // armor
-            (100.0, 200.0, 50.0),  // position
-            (0.0, 0.0, 0.0),       // velocity
-            (45.0, 30.0),          // view angles
-            1,                     // weapon_id
-            30.0,                  // ammo
-            false,                 // is_airborne
+            100.0,                // health
+            0.0,                  // armor
+            (100.0, 200.0, 50.0), // position
+            (0.0, 0.0, 0.0),      // velocity
+            (45.0, 30.0),         // view angles
+            1,                    // weapon_id
+            30.0,                 // ammo
+            false,                // is_airborne
         );
 
         assert!(result.is_ok());

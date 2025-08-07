@@ -11,20 +11,24 @@ async fn test_real_demo_parsing() -> Result<()> {
     }
 
     println!("Testing real demo: {:?}", demo_path);
-    println!("File size: {:.2} MB", std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0);
+    println!(
+        "File size: {:.2} MB",
+        std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0
+    );
 
     let start = std::time::Instant::now();
 
     // Test parsing with better error handling
-    let result = std::panic::catch_unwind(|| {
-        cs2_ml::data::vectors_from_demo(demo_path)
-    });
+    let result = std::panic::catch_unwind(|| cs2_ml::data::vectors_from_demo(demo_path));
 
     let elapsed = start.elapsed();
 
     match result {
         Ok(Ok(vectors)) => {
-            println!("✅ Successfully parsed {} behavioral vectors", vectors.len());
+            println!(
+                "✅ Successfully parsed {} behavioral vectors",
+                vectors.len()
+            );
             println!("⏱️  Parsing took: {:?}", elapsed);
 
             if !vectors.is_empty() {
@@ -33,10 +37,16 @@ async fn test_real_demo_parsing() -> Result<()> {
                 println!("   Tick: {}", first_vector.tick);
                 println!("   SteamID: {}", first_vector.steamid);
                 println!("   Health: {}", first_vector.health);
-                println!("   Position: ({:.1}, {:.1}, {:.1})", first_vector.pos_x, first_vector.pos_y, first_vector.pos_z);
+                println!(
+                    "   Position: ({:.1}, {:.1}, {:.1})",
+                    first_vector.pos_x, first_vector.pos_y, first_vector.pos_z
+                );
                 println!("   Weapon ID: {}", first_vector.weapon_id);
 
-                assert!(vectors.len() > 100, "Should extract meaningful number of vectors");
+                assert!(
+                    vectors.len() > 100,
+                    "Should extract meaningful number of vectors"
+                );
                 assert!(first_vector.tick > 0, "Tick should be positive");
                 assert!(first_vector.steamid > 0, "SteamID should be valid");
             }
@@ -44,8 +54,11 @@ async fn test_real_demo_parsing() -> Result<()> {
         Ok(Err(e)) => {
             println!("❌ Parser returned error: {}", e);
             println!("🔍 This suggests the demo format may not be fully supported");
-            println!("📋 Demo info - Size: {:.2} MB, Processing time: {:?}",
-                     std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0, elapsed);
+            println!(
+                "📋 Demo info - Size: {:.2} MB, Processing time: {:?}",
+                std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0,
+                elapsed
+            );
 
             // Don't fail the test - this is expected for some demo formats
             println!("⚠️  Test completed with parsing limitations - this is informational");
@@ -53,8 +66,11 @@ async fn test_real_demo_parsing() -> Result<()> {
         Err(panic_info) => {
             println!("💥 Parser panicked: {:?}", panic_info);
             println!("🔍 This indicates a compatibility issue with this demo format");
-            println!("📋 Demo info - Size: {:.2} MB, Processing time: {:?}",
-                     std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0, elapsed);
+            println!(
+                "📋 Demo info - Size: {:.2} MB, Processing time: {:?}",
+                std::fs::metadata(demo_path)?.len() as f64 / 1024.0 / 1024.0,
+                elapsed
+            );
 
             // Don't fail the test - this reveals important compatibility info
             println!("⚠️  Test completed with parser panic - this is diagnostic information");
@@ -68,7 +84,10 @@ async fn test_real_demo_parsing() -> Result<()> {
 async fn test_real_demo_performance_comparison() -> Result<()> {
     let test_files = [
         ("Small test demo", "../test_data/test_demo.dem"),
-        ("Professional match", "../test_data/vitality-vs-spirit-m1-dust2.dem"),
+        (
+            "Professional match",
+            "../test_data/vitality-vs-spirit-m1-dust2.dem",
+        ),
     ];
 
     for (name, path) in test_files.iter() {
@@ -88,8 +107,14 @@ async fn test_real_demo_performance_comparison() -> Result<()> {
         match result {
             Ok(vectors) => {
                 println!("   ✅ Parsed {} vectors in {:?}", vectors.len(), elapsed);
-                println!("   📈 Throughput: {:.1} vectors/sec", vectors.len() as f64 / elapsed.as_secs_f64());
-                println!("   💾 Processing rate: {:.2} MB/sec", file_size / elapsed.as_secs_f64());
+                println!(
+                    "   📈 Throughput: {:.1} vectors/sec",
+                    vectors.len() as f64 / elapsed.as_secs_f64()
+                );
+                println!(
+                    "   💾 Processing rate: {:.2} MB/sec",
+                    file_size / elapsed.as_secs_f64()
+                );
             }
             Err(e) => {
                 println!("   ❌ Failed: {}", e);
@@ -129,10 +154,19 @@ async fn test_real_demo_data_export() -> Result<()> {
 
     let parquet_size = std::fs::metadata(temp_file.path())?.len();
 
-    println!("📁 Exported {} vectors to Parquet in {:?}", subset_size, export_time);
-    println!("💾 Parquet file size: {:.2} KB", parquet_size as f64 / 1024.0);
-    println!("🗜️  Compression ratio: {:.1}:1",
-             (subset_size * std::mem::size_of::<cs2_common::BehavioralVector>()) as f64 / parquet_size as f64);
+    println!(
+        "📁 Exported {} vectors to Parquet in {:?}",
+        subset_size, export_time
+    );
+    println!(
+        "💾 Parquet file size: {:.2} KB",
+        parquet_size as f64 / 1024.0
+    );
+    println!(
+        "🗜️  Compression ratio: {:.1}:1",
+        (subset_size * std::mem::size_of::<cs2_common::BehavioralVector>()) as f64
+            / parquet_size as f64
+    );
 
     Ok(())
 }

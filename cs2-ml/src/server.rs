@@ -1,10 +1,10 @@
-use std::net::TcpListener;
-use std::io::{Read, Write};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
 use anyhow::Result;
 use candle_core::Device;
 use cs2_common::InputVector;
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 
 use crate::model::BehaviorNet;
 
@@ -26,13 +26,13 @@ pub fn serve_with_model(_net: crate::model::BehaviorNet, port: u16) -> Result<()
                 // Temporarily use placeholder prediction
                 let output = cs2_common::OutputVector {
                     delta_yaw: 0.0,
-                    delta_pitch: 0.0
+                    delta_pitch: 0.0,
                 };
                 let out_bytes = bytemuck::bytes_of(&output);
                 if let Err(e) = stream.write_all(out_bytes) {
                     eprintln!("Error writing response: {}", e);
                 }
-            },
+            }
             Err(e) => {
                 eprintln!("Error reading from client: {}", e);
             }
@@ -62,22 +62,22 @@ pub fn serve_with_model_with_shutdown(
                         // Temporarily use placeholder prediction
                         let output = cs2_common::OutputVector {
                             delta_yaw: 0.0,
-                            delta_pitch: 0.0
+                            delta_pitch: 0.0,
                         };
                         let out_bytes = bytemuck::bytes_of(&output);
                         if let Err(e) = stream.write_all(out_bytes) {
                             eprintln!("Error writing response: {}", e);
                         }
-                    },
+                    }
                     Err(e) => {
                         eprintln!("Error reading from client: {}", e);
                     }
                 }
-            },
+            }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 // No connections available, sleep briefly
                 std::thread::sleep(std::time::Duration::from_millis(10));
-            },
+            }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
                 break;
@@ -91,12 +91,15 @@ pub fn serve_with_model_with_shutdown(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cs2_common::OutputVector;
     use std::net::TcpStream;
+    use std::sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    };
     use std::thread;
     use std::time::Duration;
-    use std::sync::{Arc, atomic::{AtomicBool, Ordering}};
     use tempfile::NamedTempFile;
-    use cs2_common::OutputVector;
 
     struct TestServer {
         port: u16,
@@ -164,18 +167,18 @@ mod tests {
                             // Temporarily use placeholder prediction
                             let output = cs2_common::OutputVector {
                                 delta_yaw: 0.0,
-                                delta_pitch: 0.0
+                                delta_pitch: 0.0,
                             };
                             let out_bytes = bytemuck::bytes_of(&output);
                             let _ = stream.write_all(out_bytes);
-                        },
+                        }
                         Err(_) => continue,
                     }
-                },
+                }
                 Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     // No connections available, sleep a bit
                     thread::sleep(Duration::from_millis(10));
-                },
+                }
                 Err(_) => break,
             }
         }

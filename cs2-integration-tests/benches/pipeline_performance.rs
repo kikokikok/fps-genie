@@ -1,8 +1,8 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use std::time::Duration;
 use tokio::runtime::Runtime;
 
-use cs2_integration_tests::test_infrastructure::{TestInfrastructure, TestDataFactory};
+use cs2_integration_tests::test_infrastructure::{TestDataFactory, TestInfrastructure};
 
 /// Benchmark the complete demo processing pipeline
 fn benchmark_pipeline_processing(c: &mut Criterion) {
@@ -10,7 +10,9 @@ fn benchmark_pipeline_processing(c: &mut Criterion) {
 
     // Set up infrastructure once for all benchmarks
     let infra = rt.block_on(async {
-        TestInfrastructure::new().await.expect("Failed to create test infrastructure")
+        TestInfrastructure::new()
+            .await
+            .expect("Failed to create test infrastructure")
     });
 
     let mut group = c.benchmark_group("pipeline_processing");
@@ -26,18 +28,28 @@ fn benchmark_pipeline_processing(c: &mut Criterion) {
                 b.iter(|| {
                     rt.block_on(async {
                         // Create test match data
-                        let test_match = TestDataFactory::create_test_match(&format!("benchmark_{}", uuid::Uuid::new_v4()));
-                        let match_id = infra.db_manager().postgres.insert_match(&test_match).await.unwrap();
+                        let test_match = TestDataFactory::create_test_match(&format!(
+                            "benchmark_{}",
+                            uuid::Uuid::new_v4()
+                        ));
+                        let match_id = infra
+                            .db_manager()
+                            .postgres
+                            .insert_match(&test_match)
+                            .await
+                            .unwrap();
 
                         // Generate realistic test data
                         let snapshots = TestDataFactory::create_player_snapshots(
                             black_box(match_id),
                             black_box(batch_size),
-                            black_box(10),   // 10 players
+                            black_box(10), // 10 players
                         );
 
                         // Benchmark batch insert
-                        infra.db_manager().timescale
+                        infra
+                            .db_manager()
+                            .timescale
                             .insert_snapshots_batch(&snapshots)
                             .await
                             .unwrap();
@@ -57,7 +69,9 @@ fn benchmark_database_operations(c: &mut Criterion) {
 
     // Set up infrastructure once
     let infra = rt.block_on(async {
-        TestInfrastructure::new().await.expect("Failed to create test infrastructure")
+        TestInfrastructure::new()
+            .await
+            .expect("Failed to create test infrastructure")
     });
 
     let mut group = c.benchmark_group("database_operations");
@@ -68,8 +82,16 @@ fn benchmark_database_operations(c: &mut Criterion) {
     group.bench_function("match_insert", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let test_match = TestDataFactory::create_test_match(&format!("db_bench_{}", uuid::Uuid::new_v4()));
-                let match_id = infra.db_manager().postgres.insert_match(&test_match).await.unwrap();
+                let test_match = TestDataFactory::create_test_match(&format!(
+                    "db_bench_{}",
+                    uuid::Uuid::new_v4()
+                ));
+                let match_id = infra
+                    .db_manager()
+                    .postgres
+                    .insert_match(&test_match)
+                    .await
+                    .unwrap();
                 black_box(match_id)
             })
         })
@@ -78,7 +100,12 @@ fn benchmark_database_operations(c: &mut Criterion) {
     group.bench_function("match_query_unprocessed", |b| {
         b.iter(|| {
             rt.block_on(async {
-                let matches = infra.db_manager().postgres.get_unprocessed_matches().await.unwrap();
+                let matches = infra
+                    .db_manager()
+                    .postgres
+                    .get_unprocessed_matches()
+                    .await
+                    .unwrap();
                 black_box(matches.len())
             })
         })
@@ -89,13 +116,28 @@ fn benchmark_database_operations(c: &mut Criterion) {
         b.iter(|| {
             rt.block_on(async {
                 // Create some test data first
-                let test_match = TestDataFactory::create_test_match(&format!("query_bench_{}", uuid::Uuid::new_v4()));
-                let match_id = infra.db_manager().postgres.insert_match(&test_match).await.unwrap();
+                let test_match = TestDataFactory::create_test_match(&format!(
+                    "query_bench_{}",
+                    uuid::Uuid::new_v4()
+                ));
+                let match_id = infra
+                    .db_manager()
+                    .postgres
+                    .insert_match(&test_match)
+                    .await
+                    .unwrap();
                 let snapshots = TestDataFactory::create_player_snapshots(match_id, 100, 5);
-                infra.db_manager().timescale.insert_snapshots_batch(&snapshots).await.unwrap();
+                infra
+                    .db_manager()
+                    .timescale
+                    .insert_snapshots_batch(&snapshots)
+                    .await
+                    .unwrap();
 
                 // Benchmark the query
-                let result = infra.db_manager().timescale
+                let result = infra
+                    .db_manager()
+                    .timescale
                     .get_player_snapshots(match_id, 76561198034202275, Some(50))
                     .await
                     .unwrap();
@@ -113,7 +155,9 @@ fn benchmark_vector_operations(c: &mut Criterion) {
 
     // Set up infrastructure once
     let infra = rt.block_on(async {
-        TestInfrastructure::new().await.expect("Failed to create test infrastructure")
+        TestInfrastructure::new()
+            .await
+            .expect("Failed to create test infrastructure")
     });
 
     let mut group = c.benchmark_group("vector_operations");
@@ -134,7 +178,12 @@ fn benchmark_vector_operations(c: &mut Criterion) {
                     metadata: serde_json::json!({"benchmark": true}),
                 };
 
-                infra.db_manager().vector.store_behavioral_vector(&embedding).await.unwrap();
+                infra
+                    .db_manager()
+                    .vector
+                    .store_behavioral_vector(&embedding)
+                    .await
+                    .unwrap();
                 black_box(embedding.vector.len())
             })
         })
@@ -145,7 +194,9 @@ fn benchmark_vector_operations(c: &mut Criterion) {
         b.iter(|| {
             rt.block_on(async {
                 let query_vector: Vec<f32> = (0..256).map(|i| (i as f32) * 0.01).collect();
-                let results = infra.db_manager().vector
+                let results = infra
+                    .db_manager()
+                    .vector
                     .search_similar_behaviors(&query_vector, 10)
                     .await
                     .unwrap();
@@ -194,7 +245,9 @@ fn benchmark_concurrent_operations(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
 
     let infra = rt.block_on(async {
-        TestInfrastructure::new().await.expect("Failed to create test infrastructure")
+        TestInfrastructure::new()
+            .await
+            .expect("Failed to create test infrastructure")
     });
 
     let mut group = c.benchmark_group("concurrent_operations");
@@ -209,13 +262,23 @@ fn benchmark_concurrent_operations(c: &mut Criterion) {
             |b, &concurrency| {
                 b.iter(|| {
                     rt.block_on(async {
-                        let tasks: Vec<_> = (0..concurrency).map(|i| {
-                            let infra = &infra;
-                            async move {
-                                let test_match = TestDataFactory::create_test_match(&format!("concurrent_{}_{}", concurrency, i));
-                                infra.db_manager().postgres.insert_match(&test_match).await.unwrap()
-                            }
-                        }).collect();
+                        let tasks: Vec<_> = (0..concurrency)
+                            .map(|i| {
+                                let infra = &infra;
+                                async move {
+                                    let test_match = TestDataFactory::create_test_match(&format!(
+                                        "concurrent_{}_{}",
+                                        concurrency, i
+                                    ));
+                                    infra
+                                        .db_manager()
+                                        .postgres
+                                        .insert_match(&test_match)
+                                        .await
+                                        .unwrap()
+                                }
+                            })
+                            .collect();
 
                         let results = futures::future::join_all(tasks).await;
                         black_box(results.len())
