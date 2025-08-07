@@ -1,11 +1,26 @@
 # Multi-stage build for CS2 Demo Analysis Tools
-# Use our custom base image with all dependencies pre-installed
-FROM ghcr.io/kikokikok/fps-genie-ci-base:latest as builder
+FROM debian:bookworm-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    clang \
+    protobuf-compiler \
+    libfontconfig1-dev \
+    libssl-dev \
+    pkg-config \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /app
 
 # Copy manifests first for better layer caching
-COPY Cargo.toml Cargo.lock ./
+COPY Cargo.toml ./
 COPY cs2-analytics/Cargo.toml cs2-analytics/
 COPY cs2-client/Cargo.toml cs2-client/
 COPY cs2-common/Cargo.toml cs2-common/
@@ -30,7 +45,7 @@ RUN mkdir -p cs2-analytics/src cs2-client/src cs2-common/src cs2-data-pipeline/s
     echo "// dummy" > cs2-demo-parser/src/lib.rs && \
     echo "// dummy" > cs2-integration-tests/src/lib.rs
 
-# Build dependencies (cached layer)
+# Build dependencies (cached layer) - cs2-ml defaults to cpu-only which avoids Metal/objc issues on Linux
 RUN cargo build --release --workspace
 
 # Copy actual source code
@@ -41,6 +56,40 @@ RUN find . -name "*.rs" -exec touch {} +
 
 # Build for release with all dependencies cached
 RUN cargo build --release --workspace
+
+# Runtime image
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    libssl3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user
+RUN useradd -m -u 1000 cs2user
+
+WORKDIR /app
+
+# Copy binaries from builder stage
+COPY --from=builder /app/target/release/cs2-analytics /usr/local/bin/
+COPY --from=builder /app/target/release/cs2-data-pipeline /usr/local/bin/
+COPY --from=builder /app/target/release/cs2-demo-analyzer /usr/local/bin/
+COPY --from=builder /app/target/release/cs2-ml /usr/local/bin/
+COPY --from=builder /app/target/release/csgoproto /usr/local/bin/
+
+# Create necessary directories
+RUN mkdir -p /app/demos /app/temp /app/models \
+    && chown -R cs2user:cs2user /app
+
+USER cs2user
+
+# Default command
+CMD ["cs2-data-pipeline"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD cs2-data-pipeline --help || exit 1
 
 # Runtime image
 FROM debian:bookworm-slim
