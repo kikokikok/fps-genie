@@ -8,14 +8,9 @@ rustflags = [
 
 # Set environment variables for PyO3
 [env]
-# Set Python executable
-PYO3_PYTHON = "/Users/christian.klat/.pyenv/versions/3.9.16/bin/python3"
-# Set PYTHONPATH
-PYTHONPATH = "/Users/christian.klat/.pyenv/versions/3.9.16/lib/python3.9"
-# Tell PyO3 to ignore Python version mismatches
-PYO3_PYTHON_VERSION = "3.9"
-# Bypass some version checks
-BINDGEN_EXTRA_CLANG_ARGS = "-I/Users/christian.klat/.pyenv/versions/3.9.16/include/python3.9"
+# PYO3_PYTHON and PYTHONPATH are intentionally not set here for portability.
+# Set these in your shell or CI environment if needed.
+# PYO3_PYTHON_VERSION is intentionally not set for maximum portability.
 MACOSX_DEPLOYMENT_TARGET = "11.0"
 
 [target.x86_64-unknown-linux-gnu]
