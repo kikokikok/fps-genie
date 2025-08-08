@@ -78,13 +78,19 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config redis-tools
 
       - name: Setup databases
         run: |
           # Wait for PostgreSQL to be ready
           while ! pg_isready -h localhost -p 5432 -U cs2_user; do
             echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+          
+          # Wait for Redis to be ready
+          until redis-cli -h localhost ping; do
+            echo "Waiting for Redis..."
             sleep 1
           done
           

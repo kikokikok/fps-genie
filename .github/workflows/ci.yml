@@ -178,7 +178,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client redis-tools
 
       - name: Wait for services to be ready
         run: |
