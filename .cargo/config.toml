@@ -12,7 +12,3 @@ rustflags = [
 # Set these in your shell or CI environment if needed.
 # PYO3_PYTHON_VERSION is intentionally not set for maximum portability.
 MACOSX_DEPLOYMENT_TARGET = "11.0"
-
-[target.x86_64-unknown-linux-gnu]
-linker = "clang"
-rustflags = ["-C", "link-arg=-fuse-ld=lld"]
