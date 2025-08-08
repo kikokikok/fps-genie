@@ -10,11 +10,11 @@
 
 FPS Genie is a high-performance, Rust-based system that analyzes Counter-Strike 2 demo files to provide:
 
-- **🤖 AI-Driven Coaching**: Real-time crosshair placement correction, tactical decision analysis, and personalized feedback
-- **🏆 Pro Player Comparison**: Compare your gameplay against professional players with detailed skill gap analysis
-- **🎮 AI Behavior Cloning**: Train against AI that mimics professional player behaviors in realistic scenarios
-- **📊 Advanced Analytics**: Deep behavioral analysis, key moment extraction, and performance tracking
-- **🔄 Multi-Game Support**: Extensible architecture designed for Valorant, Apex Legends, and other FPS games
+- **🤖 AI-Driven Coaching**: Real-time crosshair placement correction, tactical decision analysis, and personalized feedback.
+- **🏆 Pro Player Comparison**: Compare your gameplay against professional players with detailed skill gap analysis.
+- **🎮 AI Behavior Cloning**: Train against AI that mimics professional player behaviors in realistic scenarios.
+- **📊 Advanced Analytics**: Deep behavioral analysis, key moment extraction, and performance tracking.
+- **🔄 Multi-Game Support**: Extensible architecture designed for Valorant, Apex Legends, and other FPS games.
 
 ## ✨ Key Features
 
