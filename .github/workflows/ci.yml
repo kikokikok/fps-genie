@@ -102,6 +102,11 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: install system dependencies (linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client python3-dev
       - uses: actions/checkout@v4
       - uses: actions-rs/toolchain@v1
         with:
@@ -178,7 +183,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client redis-tools
 
       - name: Wait for services to be ready
         run: |
