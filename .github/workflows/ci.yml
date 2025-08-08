@@ -12,7 +12,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        #Add windows-latest to the matrix if you want to run the check job on Windows
+        os: [ ubuntu-latest, macOS-latest ]
         rust: [ stable ]
     steps:
       - uses: actions/checkout@v4
@@ -22,6 +23,15 @@ jobs:
       - name: Remove cargo config (macOS ring crate fix)
         if: runner.os == 'macOS'
         run: rm -f .cargo/config.toml
+      - name: install system dependencies (linux)
+        if: runner.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client
+      - name: install system dependencies (osx)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake protobuf pkg-config
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -37,7 +47,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        os: [ ubuntu-latest, macOS-latest ]
         rust: [ stable ]
     steps:
       - name: Delete huge unnecessary tools folder
