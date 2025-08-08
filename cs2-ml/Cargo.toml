@@ -16,8 +16,8 @@ cs2-common = { path = "../cs2-common" }
 cs2-demo-parser = { path = "../cs2-demo-parser" }
 
 # ML Framework - using Candle instead of PyTorch to avoid conflicts
-candle-core = { version = "0.9.1", features = ["metal"] }
-candle-nn = { version = "0.9.1", features = ["metal"] }
+candle-core = { version = "0.9.1", features = [] }
+candle-nn = { version = "0.9.1", features = [] }
 candle-datasets = { version = "0.9", default-features = false }
 
 # Data structures and utilities
