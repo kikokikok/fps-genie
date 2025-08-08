@@ -16,15 +16,15 @@ candle-nn = { version = "0.9" }
 candle-transformers = { version = "0.9" }
 
 # Data processing
-polars = { version = "0.37", features = ["lazy", "parquet", "sql"] }
+polars = { version = "0.50", features = ["lazy", "parquet", "sql"] }
 arrow = "54.0"
-numpy = "0.21"
+numpy = "0.25"
 
 # Scientific computing
 ndarray = "0.16"
 linfa = "0.7"
 linfa-clustering = "0.7"
-smartcore = "0.3"
+smartcore = "0.4"
 
 # Visualization and reporting
 plotters = "0.3"
