@@ -1,58 +1,96 @@
-name: CI - Multi-Tier Testing
-
 on:
   push:
-    branches: [ main, master, dev, develop ]
+    branches:
+      - master
   pull_request:
-    branches: [ main, master, dev, develop ]
-  schedule:
-    # Nightly full integration tests
-    - cron: '0 2 * * *'
 
-env:
-  CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
+name: Continuous integration
 
 jobs:
-  # Tier 1: Fast Checks (2-3 minutes) - Always runs
-  fast-checks:
-    name: Fast Checks (Tier 1)
+  check:
+    name: Check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        rust: [ stable ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Remove cargo config (macOS ring crate fix)
+        if: runner.os == 'macOS'
+        run: rm -f .cargo/config.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --workspace
+
+  test:
+    name: Test Suite
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macOS-latest ]
+        rust: [ stable ]
+    steps:
+      - name: Delete huge unnecessary tools folder
+        if: runner.os == 'Linux'
+        run: rm -rf /opt/hostedtoolcache
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Remove cargo config (macOS ring crate fix)
+        if: runner.os == 'macOS'
+        run: rm -f .cargo/config.toml
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
+
+  fmt:
+    name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          submodules: recursive
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add rustfmt
+      - uses: actions-rs/cargo@v1
         with:
-          components: rustfmt, clippy
+          command: fmt
+          args: --all -- --check
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libfontconfig1-dev
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rs/toolchain@v1
         with:
-          workspaces: |
-            .
-            csgoproto
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-      - name: Fast compilation check
-        run: cargo check --workspace --all-targets
-
-      - name: Clippy lints
-        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
-
-      - name: Fast unit tests
-        run: cargo test --lib --workspace --quiet
-
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: rustup component add clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --tests --examples -- -D warnings
       - name: Security audit
         run: |
           cargo install --locked cargo-audit || true
@@ -62,7 +100,7 @@ jobs:
   infrastructure-tests:
     name: Infrastructure Tests (Tier 2)
     runs-on: ubuntu-latest
-    needs: fast-checks
+    needs: check
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
     services:
@@ -117,7 +155,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libfontconfig1-dev postgresql-client
+          sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -157,7 +195,7 @@ jobs:
   docker-build:
     name: Docker Build and Test
     runs-on: ubuntu-latest
-    needs: fast-checks
+    needs: check
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
