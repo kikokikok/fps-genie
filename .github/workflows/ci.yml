@@ -37,6 +37,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -69,6 +70,7 @@ jobs:
       - name: Remove cargo config (macOS ring crate fix)
         if: runner.os == 'macOS'
         run: rm -f .cargo/config.toml
+      - uses: Swatinem/rust-cache@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -89,6 +91,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - uses: Swatinem/rust-cache@v2
       - run: rustup component add rustfmt
       - uses: actions-rs/cargo@v1
         with:
@@ -105,6 +108,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - uses: Swatinem/rust-cache@v2
       - run: rustup component add clippy
       - uses: actions-rs/cargo@v1
         with:
@@ -170,18 +174,11 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-
+      - uses: Swatinem/rust-cache@v2
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            .
-            csgoproto
 
       - name: Wait for services to be ready
         run: |
