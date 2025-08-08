@@ -11,9 +11,9 @@ cs2-data-pipeline = { path = "../cs2-data-pipeline" }
 
 # Advanced ML and Analytics - using only Candle to avoid conflicts
 tokio = { version = "1.0", features = ["full"] }
-candle-core = { version = "0.9", features = ["metal"] }
-candle-nn = { version = "0.9", features = ["metal"] }
-candle-transformers = { version = "0.9", features = ["metal"] }
+candle-core = { version = "0.9" }
+candle-nn = { version = "0.9" }
+candle-transformers = { version = "0.9" }
 
 # Data processing
 polars = { version = "0.37", features = ["lazy", "parquet", "sql"] }

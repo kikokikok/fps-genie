@@ -18,7 +18,6 @@ cs2-demo-parser = { path = "../cs2-demo-parser" }
 # ML Framework - using Candle instead of PyTorch to avoid conflicts
 candle-core = { version = "0.9.1", features = [] }
 candle-nn = { version = "0.9.1", features = [] }
-candle-datasets = { version = "0.9", default-features = false }
 
 # Data structures and utilities
 ahash = "0.8"
@@ -28,17 +27,9 @@ glob = "0.3"
 # Data processing and serialization
 arrow = "54.0"
 parquet = "54.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# Async and HTTP for serving
-tokio = { version = "1.0", features = ["full"] }
-axum = "0.7"
-tower = "0.4"
 
 # Error handling and utilities
 anyhow = "1.0"
-thiserror = "1.0"
 
 # CLI
 clap = { version = "4.0", features = ["derive"] }
@@ -49,4 +40,3 @@ tempfile = "3.0"
 
 [dev-dependencies]
 tempfile = "3.0"
-rstest = "0.26"
