@@ -24,7 +24,7 @@ jobs:
         if: runner.os == 'macOS'
         run: rm -f .cargo/config.toml
       - name: install system dependencies (linux)
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client python3-dev
@@ -54,7 +54,7 @@ jobs:
         if: runner.os == 'Linux'
         run: rm -rf /opt/hostedtoolcache
       - name: install system dependencies (linux)
-        if: runner.os == 'ubuntu-latest'
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libfontconfig1-dev libssl-dev postgresql-client python3-dev
