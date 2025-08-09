@@ -59,9 +59,10 @@ pub enum CoordinateAxis {
 impl<'a> SecondPassParser<'a> {
     pub fn collect_entities(&mut self) {
         if !self.prop_controller.event_with_velocity
-            && (!self.wanted_ticks.contains(&self.tick) && !self.wanted_ticks.is_empty() || !self.wanted_events.is_empty()) {
-                return;
-            }
+            && (!self.wanted_ticks.contains(&self.tick) && !self.wanted_ticks.is_empty() || !self.wanted_events.is_empty())
+        {
+            return;
+        }
         if self.parse_projectiles {
             self.collect_projectiles();
             return;
@@ -306,12 +307,10 @@ impl<'a> SecondPassParser<'a> {
             None => return Err(PropCollectionError::SpecialidsItemDefNotSet),
         };
         match self.find_weapon_prop(&item_def_id, entity_id) {
-            Ok(Variant::U32(def_idx)) => {
-                match WEAPINDICIES.get(&def_idx) {
-                    Some(v) => Ok(Variant::String(v.to_string())),
-                    None => Err(PropCollectionError::WeaponIdxMappingNotFound),
-                }
-            }
+            Ok(Variant::U32(def_idx)) => match WEAPINDICIES.get(&def_idx) {
+                Some(v) => Ok(Variant::String(v.to_string())),
+                None => Err(PropCollectionError::WeaponIdxMappingNotFound),
+            },
             Ok(_) => Err(PropCollectionError::WeaponDefVariantWrongType),
             Err(e) => Err(e),
         }
@@ -639,18 +638,18 @@ impl<'a> SecondPassParser<'a> {
     }
 
     pub fn find_is_alive(&self, entity_id: &i32) -> Result<Variant, PropCollectionError> {
-        if let Some(id) = self.prop_controller.special_ids.life_state { match self.get_prop_from_ent(&id, entity_id) {
-            Ok(Variant::U32(0)) => return Ok(Variant::Bool(true)),
-            Ok(_) => {}
-            Err(_) => {}
-        } }
+        if let Some(id) = self.prop_controller.special_ids.life_state {
+            match self.get_prop_from_ent(&id, entity_id) {
+                Ok(Variant::U32(0)) => return Ok(Variant::Bool(true)),
+                Ok(_) => {}
+                Err(_) => {}
+            }
+        }
         Ok(Variant::Bool(false))
     }
     pub fn find_spotted(&self, entity_id: &i32, prop_info: &PropInfo) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&prop_info.id, entity_id) {
-            Ok(Variant::U32(mask)) => {
-                Ok(Variant::U64Vec(self.steamids_from_mask(mask)))
-            }
+            Ok(Variant::U32(mask)) => Ok(Variant::U64Vec(self.steamids_from_mask(mask))),
             Ok(_) => Err(PropCollectionError::SpottedIncorrectVariant),
             Err(e) => Err(e),
         }

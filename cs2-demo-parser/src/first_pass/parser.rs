@@ -331,15 +331,17 @@ impl<'a> FirstPassParser<'a> {
         if bytes.len() < 16 {
             return Err(DemoParserError::OutOfBytesError);
         }
-        if let Ok(magic) = std::str::from_utf8(&bytes[..8]) { match magic {
-            "PBDEMS2\0" => {}
-            "HL2DEMO\0" => {
-                return Err(DemoParserError::Source1DemoError);
+        if let Ok(magic) = std::str::from_utf8(&bytes[..8]) {
+            match magic {
+                "PBDEMS2\0" => {}
+                "HL2DEMO\0" => {
+                    return Err(DemoParserError::Source1DemoError);
+                }
+                _ => {
+                    return Err(DemoParserError::UnknownFile);
+                }
             }
-            _ => {
-                return Err(DemoParserError::UnknownFile);
-            }
-        } };
+        };
         // hmmmm not sure where the 18 comes from if the header is only 16?
         // can be used to check that file ends early
         let file_length_expected = match bytes[8..12].try_into() {

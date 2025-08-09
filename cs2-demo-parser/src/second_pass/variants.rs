@@ -415,19 +415,71 @@ impl VarVec {
     #[inline(always)]
     pub fn push_variant(&mut self, item: Option<Variant>) {
         match item {
-            Some(Variant::F32(p)) => if let VarVec::F32(f) = self { f.push(Some(p)) },
-            Some(Variant::I32(p)) => if let VarVec::I32(f) = self { f.push(Some(p)) },
-            Some(Variant::String(p)) => if let VarVec::String(f) = self { f.push(Some(p)) },
-            Some(Variant::U32(p)) => if let VarVec::U32(f) = self { f.push(Some(p)) },
-            Some(Variant::U64(p)) => if let VarVec::U64(f) = self { f.push(Some(p)) },
-            Some(Variant::Bool(p)) => if let VarVec::Bool(f) = self { f.push(Some(p)) },
-            Some(Variant::StringVec(p)) => if let VarVec::StringVec(f) = self { f.push(p) },
-            Some(Variant::U64Vec(p)) => if let VarVec::U64Vec(f) = self { f.push(p) },
-            Some(Variant::U32Vec(p)) => if let VarVec::U32Vec(f) = self { f.push(p) },
-            Some(Variant::VecXY(p)) => if let VarVec::XYVec(f) = self { f.push(Some(p)) },
-            Some(Variant::VecXYZ(p)) => if let VarVec::XYZVec(f) = self { f.push(Some(p)) },
-            Some(Variant::Stickers(p)) => if let VarVec::Stickers(f) = self { f.push(p) },
-            Some(Variant::InputHistory(p)) => if let VarVec::InputHistory(f) = self { f.push(p) },
+            Some(Variant::F32(p)) => {
+                if let VarVec::F32(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::I32(p)) => {
+                if let VarVec::I32(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::String(p)) => {
+                if let VarVec::String(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::U32(p)) => {
+                if let VarVec::U32(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::U64(p)) => {
+                if let VarVec::U64(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::Bool(p)) => {
+                if let VarVec::Bool(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::StringVec(p)) => {
+                if let VarVec::StringVec(f) = self {
+                    f.push(p)
+                }
+            }
+            Some(Variant::U64Vec(p)) => {
+                if let VarVec::U64Vec(f) = self {
+                    f.push(p)
+                }
+            }
+            Some(Variant::U32Vec(p)) => {
+                if let VarVec::U32Vec(f) = self {
+                    f.push(p)
+                }
+            }
+            Some(Variant::VecXY(p)) => {
+                if let VarVec::XYVec(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::VecXYZ(p)) => {
+                if let VarVec::XYZVec(f) = self {
+                    f.push(Some(p))
+                }
+            }
+            Some(Variant::Stickers(p)) => {
+                if let VarVec::Stickers(f) = self {
+                    f.push(p)
+                }
+            }
+            Some(Variant::InputHistory(p)) => {
+                if let VarVec::InputHistory(f) = self {
+                    f.push(p)
+                }
+            }
             None => self.push_none(),
             _ => {}
         }
@@ -703,10 +755,7 @@ impl Serialize for OutputSerdeHelperStruct {
                         map.serialize_entry(&prop_info.prop_friendly_name, val)?;
                     }
                     Some(VarVec::U64(val)) => {
-                        let as_str: Vec<Option<String>> = val
-                            .iter()
-                            .map(|x| x.as_ref().map(|u| u.to_string()))
-                            .collect_vec();
+                        let as_str: Vec<Option<String>> = val.iter().map(|x| x.as_ref().map(|u| u.to_string())).collect_vec();
                         map.serialize_entry(&prop_info.prop_friendly_name, &as_str)?;
                     }
                     Some(VarVec::Bool(val)) => {

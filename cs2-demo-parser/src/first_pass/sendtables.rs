@@ -563,9 +563,7 @@ fn find_field_type(name: &str, field_type_map: &mut AHashMap<String, FieldType>)
                 POINTER_TYPES.contains(&name)
             }
         }
-        None => {
-            POINTER_TYPES.contains(&name)
-        }
+        None => POINTER_TYPES.contains(&name),
     };
 
     let mut ft = FieldType {
@@ -695,10 +693,9 @@ pub fn is_vector(field: &ConstructorField) -> bool {
     matches!(field.field_type.base_type.as_str(), "CUtlVector" | "CNetworkUtlVectorBase")
 }
 pub fn is_array(field: &ConstructorField) -> bool {
-    if field.field_type.count.is_some()
-        && field.field_type.base_type != "char" {
-            return true;
-        }
+    if field.field_type.count.is_some() && field.field_type.base_type != "char" {
+        return true;
+    }
     false
 }
 

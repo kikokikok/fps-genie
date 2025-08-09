@@ -547,9 +547,11 @@ impl PropController {
                 }
                 Field::Serializer(ser) => self.traverse_fields(&mut ser.serializer.fields, ser_name.clone() + "." + &ser.serializer.name, path.clone()),
                 Field::Pointer(ser) => self.traverse_fields(&mut ser.serializer.fields, ser_name.clone() + "." + &ser.serializer.name, path.clone()),
-                Field::Array(ser) => if let Field::Value(v) = &mut ser.field_enum.as_mut() {
-                    self.handle_prop(&(ser_name.clone() + "." + &v.name), v, path);
-                },
+                Field::Array(ser) => {
+                    if let Field::Value(v) = &mut ser.field_enum.as_mut() {
+                        self.handle_prop(&(ser_name.clone() + "." + &v.name), v, path);
+                    }
+                }
                 Field::Vector(_x) => {
                     let vec_path = path.clone();
                     if let Ok(inner) = f.get_inner_mut(0) {

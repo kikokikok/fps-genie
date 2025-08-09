@@ -99,7 +99,6 @@ impl BehaviorNet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     #[test]
     fn test_forward_shape() {

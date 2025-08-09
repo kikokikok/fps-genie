@@ -407,7 +407,7 @@ fn convert_weapon_prefix_to_general(full_name: &str) -> String {
 }
 fn is_weapon_prop(full_name: &str) -> bool {
     let split_at_dot: Vec<&str> = full_name.split(".").collect();
-    
+
     (split_at_dot[0].contains("Weapon") || split_at_dot[0].contains("AK")) && !split_at_dot[0].contains("Player") || split_at_dot[0].contains("CDEagle")
 }
 fn is_grenade_prop(full_name: &str) -> bool {

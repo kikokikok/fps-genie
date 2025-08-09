@@ -389,10 +389,7 @@ mod tests {
             assert_eq!(row.get_float(10).unwrap(), vectors[i].yaw);
             assert_eq!(row.get_float(11).unwrap(), vectors[i].pitch);
             // Use correct type accessor for UInt32 weapon_id field
-            assert_eq!(
-                row.get_uint(12).unwrap(),
-                vectors[i].weapon_id as u32
-            );
+            assert_eq!(row.get_uint(12).unwrap(), vectors[i].weapon_id as u32);
             assert_eq!(row.get_float(13).unwrap(), vectors[i].ammo);
             assert_eq!(row.get_float(14).unwrap(), vectors[i].is_airborne);
             assert_eq!(row.get_float(15).unwrap(), vectors[i].delta_yaw);

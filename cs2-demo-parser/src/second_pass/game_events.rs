@@ -495,52 +495,52 @@ impl<'a> SecondPassParser<'a> {
     }
     fn create_custom_event_weapon_sold(&mut self, events: &[GameEventInfo]) {
         // This event is always emitted and is always removed in the end.
-        events.iter().for_each(|x| if let GameEventInfo::WeaponPurchaseCount((Variant::U32(0), entid, prop_id)) = x {
-            if let Ok(player) = self.find_player_metadata(*entid) {
-                let mut fields = vec![];
-                fields.push(EventField {
-                    data: self.create_name(player).ok(),
-                    name: "name".to_string(),
-                });
-                fields.push(EventField {
-                    data: Some(Variant::U64(player.steamid.unwrap_or(0))),
-                    name: "steamid".to_string(),
-                });
-                fields.push(EventField {
-                    data: Some(Variant::I32(self.tick)),
-                    name: "tick".to_string(),
-                });
-                let inventory_slot = prop_id - ITEM_PURCHASE_COUNT;
-                let def_idx = self.get_prop_from_ent(&(ITEM_PURCHASE_NEW_DEF_IDX + inventory_slot), entid).ok();
+        events.iter().for_each(|x| {
+            if let GameEventInfo::WeaponPurchaseCount((Variant::U32(0), entid, prop_id)) = x {
+                if let Ok(player) = self.find_player_metadata(*entid) {
+                    let mut fields = vec![];
+                    fields.push(EventField {
+                        data: self.create_name(player).ok(),
+                        name: "name".to_string(),
+                    });
+                    fields.push(EventField {
+                        data: Some(Variant::U64(player.steamid.unwrap_or(0))),
+                        name: "steamid".to_string(),
+                    });
+                    fields.push(EventField {
+                        data: Some(Variant::I32(self.tick)),
+                        name: "tick".to_string(),
+                    });
+                    let inventory_slot = prop_id - ITEM_PURCHASE_COUNT;
+                    let def_idx = self.get_prop_from_ent(&(ITEM_PURCHASE_NEW_DEF_IDX + inventory_slot), entid).ok();
 
-                let name = match def_idx {
-                    Some(Variant::U32(id)) => {
-                        WEAPINDICIES.get(&id).map(|name| Variant::String(name.to_string()))
-                    }
-                    _ => None,
-                };
-                fields.push(EventField {
-                    data: name,
-                    name: "weapon_name".to_string(),
-                });
+                    let name = match def_idx {
+                        Some(Variant::U32(id)) => WEAPINDICIES.get(&id).map(|name| Variant::String(name.to_string())),
+                        _ => None,
+                    };
+                    fields.push(EventField {
+                        data: name,
+                        name: "weapon_name".to_string(),
+                    });
 
-                fields.push(EventField {
-                    data: self.get_prop_from_ent(&(ITEM_PURCHASE_COST + inventory_slot), entid).ok(),
-                    name: "cost".to_string(),
-                });
-                fields.push(EventField {
-                    data: Some(Variant::U32(inventory_slot)),
-                    name: "inventory_slot".to_string(),
-                });
-                fields.extend(self.find_extra_props_events(*entid, "user"));
-                fields.extend(self.find_non_player_props());
-                let ge = GameEvent {
-                    name: "item_sold".to_string(),
-                    fields,
-                    tick: self.tick,
-                };
-                self.game_events.push(ge);
-                self.game_events_counter.insert("item_sold".to_string());
+                    fields.push(EventField {
+                        data: self.get_prop_from_ent(&(ITEM_PURCHASE_COST + inventory_slot), entid).ok(),
+                        name: "cost".to_string(),
+                    });
+                    fields.push(EventField {
+                        data: Some(Variant::U32(inventory_slot)),
+                        name: "inventory_slot".to_string(),
+                    });
+                    fields.extend(self.find_extra_props_events(*entid, "user"));
+                    fields.extend(self.find_non_player_props());
+                    let ge = GameEvent {
+                        name: "item_sold".to_string(),
+                        fields,
+                        tick: self.tick,
+                    };
+                    self.game_events.push(ge);
+                    self.game_events_counter.insert("item_sold".to_string());
+                }
             }
         });
     }
@@ -845,7 +845,11 @@ impl<'a> SecondPassParser<'a> {
     pub fn find_current_round(&self) -> Option<Variant> {
         if let Some(prop_id) = self.prop_controller.special_ids.total_rounds_played {
             match self.rules_entity_id {
-                Some(entid) => if let Ok(Variant::I32(val)) = self.get_prop_from_ent(&prop_id, &entid) { return Some(Variant::I32(val + 1)) },
+                Some(entid) => {
+                    if let Ok(Variant::I32(val)) = self.get_prop_from_ent(&prop_id, &entid) {
+                        return Some(Variant::I32(val + 1));
+                    }
+                }
                 None => return None,
             }
         }
@@ -1064,9 +1068,7 @@ fn parse_key(key: &KeyT) -> Option<Variant> {
         7 => Some(Variant::U64(key.val_uint64())),
         8 => Some(Variant::I32(key.val_long().try_into().unwrap_or(-1))),
         9 => Some(Variant::I32(key.val_short().try_into().unwrap_or(-1))),
-        _ => {
-            None
-        }
+        _ => None,
     }
 }
 #[derive(Debug, Clone, PartialEq)]

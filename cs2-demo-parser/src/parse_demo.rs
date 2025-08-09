@@ -53,10 +53,7 @@ pub enum ParsingMode {
 
 impl<'a> Parser<'a> {
     pub fn new(input: ParserInputs<'a>, parsing_mode: ParsingMode) -> Self {
-        Parser {
-            input,
-            parsing_mode,
-        }
+        Parser { input, parsing_mode }
     }
     pub fn parse_demo(&mut self, demo_bytes: &[u8]) -> Result<DemoOutput, DemoParserError> {
         let mut first_pass_parser = FirstPassParser::new(&self.input);
@@ -327,10 +324,9 @@ impl<'a> Parser<'a> {
 
         for part_df in v {
             for (k, v) in part_df {
-                if remove_name_and_steamid
-                    && (k == &STEAMID_ID || k == &NAME_ID) {
-                        continue;
-                    }
+                if remove_name_and_steamid && (k == &STEAMID_ID || k == &NAME_ID) {
+                    continue;
+                }
 
                 if big.contains_key(k) {
                     if let Some(inner) = big.get_mut(k) {

@@ -99,7 +99,6 @@ mod tests {
     };
     use std::thread;
     use std::time::Duration;
-    
 
     struct TestServer {
         port: u16,
