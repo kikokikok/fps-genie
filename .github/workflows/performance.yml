@@ -68,23 +68,41 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version --verbose | grep release | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             .
             csgoproto
+          cache-targets: true
+          cache-on-failure: true
+          shared-key: "fps-genie-rust-cache"
+          key: ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml', '**/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}
+          target-dir: target
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          sudo apt-get install -y libssl-dev pkg-config redis-tools
 
       - name: Setup databases
         run: |
           # Wait for PostgreSQL to be ready
           while ! pg_isready -h localhost -p 5432 -U cs2_user; do
             echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+          
+          # Wait for Redis to be ready
+          until redis-cli -h localhost ping; do
+            echo "Waiting for Redis..."
             sleep 1
           done
           
@@ -196,8 +214,21 @@ jobs:
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version --verbose | grep release | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+          shared-key: "fps-genie-rust-cache"
+          key: ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml', '**/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}
+          target-dir: target
 
       - name: Install system dependencies
         run: |

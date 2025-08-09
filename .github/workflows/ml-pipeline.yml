@@ -73,12 +73,21 @@ jobs:
             python3-pip \
             python3-venv
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version --verbose | grep release | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            .
-            csgoproto
+          cache-targets: true
+          cache-on-failure: true
+          shared-key: "fps-genie-rust-cache"
+          key: ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml', '**/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}
+          target-dir: target
 
       - name: Set up Python environment
         run: |
@@ -127,7 +136,7 @@ jobs:
           if find . -name "*.ipynb" -type f | head -1; then
             echo "Found Jupyter notebooks, validating..."
             source venv/bin/activate
-            
+          
             # Test notebook execution with nbconvert
             for notebook in $(find . -name "*.ipynb" -type f); do
               echo "Validating notebook: $notebook"
@@ -166,8 +175,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libfontconfig1-dev
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version --verbose | grep release | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+          shared-key: "fps-genie-rust-cache"
+          key: ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml', '**/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}
+          target-dir: target
 
       - name: Run ML performance benchmarks
         run: |
@@ -225,8 +247,21 @@ jobs:
         run: |
           choco install protoc
 
+      - name: Get Rust version
+        id: rust-version
+        run: echo "version=$(rustc --version --verbose | grep release | awk '{print $2}')" >> $GITHUB_OUTPUT
+
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          cache-targets: true
+          cache-on-failure: true
+          shared-key: "fps-genie-rust-cache"
+          key: ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml', '**/src/**') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}-${{ hashFiles('**/Cargo.lock', '**/Cargo.toml') }}
+            ${{ runner.os }}-rust-${{ steps.rust-version.outputs.version }}
+          target-dir: target
 
       - name: Test feature compilation
         if: ${{ !matrix.skip-build }}
@@ -239,3 +274,4 @@ jobs:
         run: |
           cd cs2-ml
           cargo test --no-default-features --features ${{ matrix.features }} --lib
+
