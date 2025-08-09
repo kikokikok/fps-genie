@@ -82,7 +82,7 @@ impl<'a> Bitreader<'a> {
     }
 
     pub fn read_bit_coord_pres(&mut self) -> Result<f32, DemoParserError> {
-        return Ok(self.read_nbits(20)? as f32 * 360.0 / (1 << 20) as f32 - 180.0);
+        Ok(self.read_nbits(20)? as f32 * 360.0 / (1 << 20) as f32 - 180.0)
     }
     pub fn decode_qfloat(&mut self, qf_idx: u8, qf_map: &QfMapper) -> Result<Variant, DemoParserError> {
         match qf_map.map.get(&(qf_idx as u32)) {
@@ -102,7 +102,7 @@ impl<'a> Bitreader<'a> {
         if ammo > 0 {
             return Ok(ammo - 1);
         }
-        return Ok(ammo);
+        Ok(ammo)
     }
     pub fn decode_vector_noscale(&mut self) -> Result<[f32; 3], DemoParserError> {
         let mut v = [0.0; 3];
@@ -160,7 +160,7 @@ impl<'a> Bitreader<'a> {
         let neg_z = self.read_boolean()?;
         let prod_sum = v[0] * v[0] + v[1] * v[1];
         if prod_sum < 1.0 {
-            v[2] = (1.0 - prod_sum).sqrt() as f32;
+            v[2] = (1.0 - prod_sum).sqrt();
         } else {
             v[2] = 0.0;
         }
@@ -201,7 +201,7 @@ impl<'a> Bitreader<'a> {
         Ok(v)
     }
     pub fn read_angle(&mut self, n: usize) -> Result<f32, DemoParserError> {
-        return Ok(self.decode_noscale()? / ((1 << n) as f32));
+        Ok(self.decode_noscale()? / ((1 << n) as f32))
     }
 }
 
@@ -370,28 +370,31 @@ impl QuantalizedFloat {
                 steps = 1 << qf.bit_count;
             }
             qf.offset = range_2 as f32 / steps as f32;
-            qf.high = qf.low + ((range_2 as f32 - qf.offset) as f32);
+            qf.high = qf.low + (range_2 as f32 - qf.offset);
         }
 
         qf.assign_multipliers(steps);
 
-        if (qf.flags & QFF_ROUNDDOWN) != 0 {
-            if qf.quantize(qf.low) == qf.low {
+        if (qf.flags & QFF_ROUNDDOWN) != 0
+            && qf.quantize(qf.low) == qf.low {
                 qf.flags &= !QFF_ROUNDDOWN;
             }
-        }
-        if (qf.flags & QFF_ROUNDUP) != 0 {
-            if qf.quantize(qf.high) == qf.high {
+        if (qf.flags & QFF_ROUNDUP) != 0
+            && qf.quantize(qf.high) == qf.high {
                 qf.flags &= !QFF_ROUNDUP
             }
-        }
-        if (qf.flags & QFF_ENCODE_ZERO) != 0 {
-            if qf.quantize(0.0) == 0.0 {
+        if (qf.flags & QFF_ENCODE_ZERO) != 0
+            && qf.quantize(0.0) == 0.0 {
                 qf.flags &= !QFF_ENCODE_ZERO;
             }
-        }
 
         qf
+    }
+}
+
+impl fmt::Display for Decoder {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -404,10 +407,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -416,10 +419,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -428,10 +431,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -440,10 +443,10 @@ mod tests {
         let qf = QuantalizedFloat::new(8, Some(5), Some(-4.000000), Some(12.000000));
         let correct = QuantalizedFloat {
             low: -4.00000000000000000000000000000000,
-            high: 11.93750000000000000000000000000000,
+            high: 11.937_5,
             high_low_mul: 16.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.06250000000000000000000000000000,
+            dec_mul: 0.003_921_569,
+            offset: 0.062_5,
             bit_count: 8,
             flags: 0,
             no_scale: false,
@@ -454,7 +457,7 @@ mod tests {
             low: 0.00000000000000000000000000000000,
             high: 1.00000000000000000000000000000000,
             high_low_mul: 255.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
+            dec_mul: 0.003_921_569,
             offset: 0.00000000000000000000000000000000,
             bit_count: 8,
             flags: 0,
@@ -464,10 +467,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(-8), None, Some(1.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 0.99996948242187500000000000000000,
+            high: 0.999_969_5,
             high_low_mul: 32768.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.00003051757812500000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.000_030_517_578,
             bit_count: 15,
             flags: 4294967288,
             no_scale: false,
@@ -476,10 +479,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(-8), None, Some(1.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 0.99996948242187500000000000000000,
+            high: 0.999_969_5,
             high_low_mul: 32768.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.00003051757812500000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.000_030_517_578,
             bit_count: 15,
             flags: 4294967288,
             no_scale: false,
@@ -490,7 +493,7 @@ mod tests {
             low: 0.00000000000000000000000000000000,
             high: 1023.00000000000000000000000000000000,
             high_low_mul: 1.00000000000000000000000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
+            dec_mul: 0.000_977_517_1,
             offset: 1.00000000000000000000000000000000,
             bit_count: 10,
             flags: 0,
@@ -500,10 +503,10 @@ mod tests {
         let qf = QuantalizedFloat::new(10, Some(1), None, Some(256.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 255.75000000000000000000000000000000,
+            high: 255.75,
             high_low_mul: 4.00000000000000000000000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
-            offset: 0.25000000000000000000000000000000,
+            dec_mul: 0.000_977_517_1,
+            offset: 0.25,
             bit_count: 10,
             flags: 0,
             no_scale: false,
@@ -513,8 +516,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -4096.00000000000000000000000000000000,
             high: 4096.00000000000000000000000000000000,
-            high_low_mul: 31.99987792968750000000000000000000,
-            dec_mul: 0.00000381471181754022836685180664,
+            high_low_mul: 31.999_878,
+            dec_mul: 0.000_003_814_712,
             offset: 0.00000000000000000000000000000000,
             bit_count: 18,
             flags: 4,
@@ -525,8 +528,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -4096.00000000000000000000000000000000,
             high: 4096.00000000000000000000000000000000,
-            high_low_mul: 31.99987792968750000000000000000000,
-            dec_mul: 0.00000381471181754022836685180664,
+            high_low_mul: 31.999_878,
+            dec_mul: 0.000_003_814_712,
             offset: 0.00000000000000000000000000000000,
             bit_count: 18,
             flags: 4,
@@ -537,8 +540,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -4096.00000000000000000000000000000000,
             high: 4096.00000000000000000000000000000000,
-            high_low_mul: 31.99987792968750000000000000000000,
-            dec_mul: 0.00000381471181754022836685180664,
+            high_low_mul: 31.999_878,
+            dec_mul: 0.000_003_814_712,
             offset: 0.00000000000000000000000000000000,
             bit_count: 18,
             flags: 4,
@@ -548,10 +551,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -560,10 +563,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -572,10 +575,10 @@ mod tests {
         let qf = QuantalizedFloat::new(15, Some(1), None, Some(1024.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1023.96875000000000000000000000000000,
+            high: 1_023.968_75,
             high_low_mul: 32.00000000000000000000000000000000,
-            dec_mul: 0.00003051850944757461547851562500,
-            offset: 0.03125000000000000000000000000000,
+            dec_mul: 0.000_030_518_51,
+            offset: 0.031_25,
             bit_count: 15,
             flags: 0,
             no_scale: false,
@@ -584,10 +587,10 @@ mod tests {
         let qf = QuantalizedFloat::new(8, Some(1), None, Some(4.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 3.98437500000000000000000000000000,
+            high: 3.984_375,
             high_low_mul: 64.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.01562500000000000000000000000000,
+            dec_mul: 0.003_921_569,
+            offset: 0.015_625,
             bit_count: 8,
             flags: 0,
             no_scale: false,
@@ -633,8 +636,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -64.00000000000000000000000000000000,
             high: 64.00000000000000000000000000000000,
-            high_low_mul: 7.99218750000000000000000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
+            high_low_mul: 7.992_187_5,
+            dec_mul: 0.000_977_517_1,
             offset: 0.00000000000000000000000000000000,
             bit_count: 10,
             flags: 4,
@@ -645,8 +648,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -64.00000000000000000000000000000000,
             high: 64.00000000000000000000000000000000,
-            high_low_mul: 7.99218750000000000000000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
+            high_low_mul: 7.992_187_5,
+            dec_mul: 0.000_977_517_1,
             offset: 0.00000000000000000000000000000000,
             bit_count: 10,
             flags: 4,
@@ -656,10 +659,10 @@ mod tests {
         let qf = QuantalizedFloat::new(20, Some(4), None, Some(128.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 127.99987792968750000000000000000000,
+            high: 127.999_88,
             high_low_mul: 8192.00000000000000000000000000000000,
-            dec_mul: 0.00000095367522590095177292823792,
-            offset: 0.00012207031250000000000000000000,
+            dec_mul: 0.000_000_953_675_2,
+            offset: 0.000_122_070_31,
             bit_count: 20,
             flags: 0,
             no_scale: false,
@@ -668,10 +671,10 @@ mod tests {
         let qf = QuantalizedFloat::new(8, Some(-8), None, Some(1.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 0.99609375000000000000000000000000,
+            high: 0.996_093_75,
             high_low_mul: 256.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.00390625000000000000000000000000,
+            dec_mul: 0.003_921_569,
+            offset: 0.003_906_25,
             bit_count: 8,
             flags: 4294967288,
             no_scale: false,
@@ -680,10 +683,10 @@ mod tests {
         let qf = QuantalizedFloat::new(20, Some(1), None, Some(256.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 255.99975585937500000000000000000000,
+            high: 255.999_76,
             high_low_mul: 4096.00000000000000000000000000000000,
-            dec_mul: 0.00000095367522590095177292823792,
-            offset: 0.00024414062500000000000000000000,
+            dec_mul: 0.000_000_953_675_2,
+            offset: 0.000_244_140_63,
             bit_count: 20,
             flags: 0,
             no_scale: false,
@@ -691,35 +694,35 @@ mod tests {
         assert_eq!(qf, correct);
         let qf = QuantalizedFloat::new(10, Some(2), Some(-25.000000), Some(25.000000));
         let correct = QuantalizedFloat {
-            low: -24.95117187500000000000000000000000,
+            low: -24.951_172,
             high: 25.00000000000000000000000000000000,
-            high_low_mul: 20.47999954223632812500000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
-            offset: 0.04882812500000000000000000000000,
+            high_low_mul: 20.48,
+            dec_mul: 0.000_977_517_1,
+            offset: 0.048_828_125,
             bit_count: 10,
             flags: 0,
             no_scale: false,
         };
         assert_eq!(qf, correct);
-        let qf = QuantalizedFloat::new(10, Some(2), None, Some(102.300003));
+        let qf = QuantalizedFloat::new(10, Some(2), None, Some(102.3));
         let correct = QuantalizedFloat {
-            low: 0.09990234673023223876953125000000,
-            high: 102.30000305175781250000000000000000,
-            high_low_mul: 10.00977420806884765625000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
-            offset: 0.09990234673023223876953125000000,
+            low: 0.099_902_35,
+            high: 102.3,
+            high_low_mul: 10.009_774,
+            dec_mul: 0.000_977_517_1,
+            offset: 0.099_902_35,
             bit_count: 10,
             flags: 2,
             no_scale: false,
         };
         assert_eq!(qf, correct);
-        let qf = QuantalizedFloat::new(10, Some(2), None, Some(102.300003));
+        let qf = QuantalizedFloat::new(10, Some(2), None, Some(102.3));
         let correct = QuantalizedFloat {
-            low: 0.09990234673023223876953125000000,
-            high: 102.30000305175781250000000000000000,
-            high_low_mul: 10.00977420806884765625000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
-            offset: 0.09990234673023223876953125000000,
+            low: 0.099_902_35,
+            high: 102.3,
+            high_low_mul: 10.009_774,
+            dec_mul: 0.000_977_517_1,
+            offset: 0.099_902_35,
             bit_count: 10,
             flags: 2,
             no_scale: false,
@@ -728,10 +731,10 @@ mod tests {
         let qf = QuantalizedFloat::new(8, Some(1), None, Some(64.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 63.75000000000000000000000000000000,
+            high: 63.75,
             high_low_mul: 4.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.25000000000000000000000000000000,
+            dec_mul: 0.003_921_569,
+            offset: 0.25,
             bit_count: 8,
             flags: 0,
             no_scale: false,
@@ -742,7 +745,7 @@ mod tests {
             low: 0.00000000000000000000000000000000,
             high: 255.00000000000000000000000000000000,
             high_low_mul: 1.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
+            dec_mul: 0.003_921_569,
             offset: 1.00000000000000000000000000000000,
             bit_count: 8,
             flags: 0,
@@ -753,8 +756,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
             high: 100.00000000000000000000000000000000,
-            high_low_mul: 2.54999995231628417968750000000000,
-            dec_mul: 0.00392156885936856269836425781250,
+            high_low_mul: 2.55,
+            dec_mul: 0.003_921_569,
             offset: 0.00000000000000000000000000000000,
             bit_count: 8,
             flags: 0,
@@ -764,10 +767,10 @@ mod tests {
         let qf = QuantalizedFloat::new(12, Some(1), None, Some(2048.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 2047.50000000000000000000000000000000,
+            high: 2_047.5,
             high_low_mul: 2.00000000000000000000000000000000,
-            dec_mul: 0.00024420025874860584735870361328,
-            offset: 0.50000000000000000000000000000000,
+            dec_mul: 0.000_244_200_26,
+            offset: 0.5,
             bit_count: 12,
             flags: 0,
             no_scale: false,
@@ -777,8 +780,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -4096.00000000000000000000000000000000,
             high: 4096.00000000000000000000000000000000,
-            high_low_mul: 15.99987792968750000000000000000000,
-            dec_mul: 0.00000762945273891091346740722656,
+            high_low_mul: 15.999_878,
+            dec_mul: 0.000_007_629_453,
             offset: 0.00000000000000000000000000000000,
             bit_count: 17,
             flags: 4,
@@ -789,8 +792,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
             high: 360.00000000000000000000000000000000,
-            high_low_mul: 0.70833331346511840820312500000000,
-            dec_mul: 0.00392156885936856269836425781250,
+            high_low_mul: 0.708_333_3,
+            dec_mul: 0.003_921_569,
             offset: 0.00000000000000000000000000000000,
             bit_count: 8,
             flags: 0,
@@ -801,8 +804,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
             high: 360.00000000000000000000000000000000,
-            high_low_mul: 0.70833331346511840820312500000000,
-            dec_mul: 0.00392156885936856269836425781250,
+            high_low_mul: 0.708_333_3,
+            dec_mul: 0.003_921_569,
             offset: 0.00000000000000000000000000000000,
             bit_count: 8,
             flags: 0,
@@ -812,10 +815,10 @@ mod tests {
         let qf = QuantalizedFloat::new(16, Some(1), None, Some(500.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 499.99237060546875000000000000000000,
-            high_low_mul: 131.05889892578125000000000000000000,
-            dec_mul: 0.00001525902189314365386962890625,
-            offset: 0.00762939453125000000000000000000,
+            high: 499.992_37,
+            high_low_mul: 131.058_9,
+            dec_mul: 0.000_015_259_022,
+            offset: 0.007_629_394_5,
             bit_count: 16,
             flags: 0,
             no_scale: false,
@@ -824,10 +827,10 @@ mod tests {
         let qf = QuantalizedFloat::new(18, Some(1), None, Some(1500.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 1499.99426269531250000000000000000000,
-            high_low_mul: 174.76266479492187500000000000000000,
-            dec_mul: 0.00000381471181754022836685180664,
-            offset: 0.00572204589843750000000000000000,
+            high: 1_499.994_3,
+            high_low_mul: 174.762_66,
+            dec_mul: 0.000_003_814_712,
+            offset: 0.005_722_046,
             bit_count: 18,
             flags: 0,
             no_scale: false,
@@ -837,8 +840,8 @@ mod tests {
         let correct = QuantalizedFloat {
             low: -1.00000000000000000000000000000000,
             high: 63.00000000000000000000000000000000,
-            high_low_mul: 31.98437500000000000000000000000000,
-            dec_mul: 0.00048851978499442338943481445312,
+            high_low_mul: 31.984_375,
+            dec_mul: 0.000_488_519_8,
             offset: 0.00000000000000000000000000000000,
             bit_count: 11,
             flags: 0,
@@ -848,10 +851,10 @@ mod tests {
         let qf = QuantalizedFloat::new(7, Some(1), None, Some(360.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 357.18750000000000000000000000000000,
-            high_low_mul: 0.35555556416511535644531250000000,
-            dec_mul: 0.00787401571869850158691406250000,
-            offset: 2.81250000000000000000000000000000,
+            high: 357.187_5,
+            high_low_mul: 0.355_555_56,
+            dec_mul: 0.007_874_016,
+            offset: 2.812_5,
             bit_count: 7,
             flags: 0,
             no_scale: false,
@@ -862,7 +865,7 @@ mod tests {
             low: 1.00000000000000000000000000000000,
             high: 64.00000000000000000000000000000000,
             high_low_mul: 1.00000000000000000000000000000000,
-            dec_mul: 0.01587301678955554962158203125000,
+            dec_mul: 0.015_873_017,
             offset: 1.00000000000000000000000000000000,
             bit_count: 6,
             flags: 0,
@@ -872,10 +875,10 @@ mod tests {
         let qf = QuantalizedFloat::new(8, Some(1), None, Some(1.000000));
         let correct = QuantalizedFloat {
             low: 0.00000000000000000000000000000000,
-            high: 0.99609375000000000000000000000000,
+            high: 0.996_093_75,
             high_low_mul: 256.00000000000000000000000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.00390625000000000000000000000000,
+            dec_mul: 0.003_921_569,
+            offset: 0.003_906_25,
             bit_count: 8,
             flags: 0,
             no_scale: false,
@@ -883,10 +886,10 @@ mod tests {
         assert_eq!(qf, correct);
         let qf = QuantalizedFloat::new(10, None, Some(0.100000), Some(10.000000));
         let correct = QuantalizedFloat {
-            low: 0.10000000149011611938476562500000,
+            low: 0.1,
             high: 10.00000000000000000000000000000000,
-            high_low_mul: 103.33333587646484375000000000000000,
-            dec_mul: 0.00097751710563898086547851562500,
+            high_low_mul: 103.333_336,
+            dec_mul: 0.000_977_517_1,
             offset: 0.00000000000000000000000000000000,
             bit_count: 10,
             flags: 0,
@@ -895,21 +898,15 @@ mod tests {
         assert_eq!(qf, correct);
         let qf = QuantalizedFloat::new(8, Some(2), None, Some(60.000000));
         let correct = QuantalizedFloat {
-            low: 0.23437500000000000000000000000000,
+            low: 0.234_375,
             high: 60.00000000000000000000000000000000,
-            high_low_mul: 4.26624011993408203125000000000000,
-            dec_mul: 0.00392156885936856269836425781250,
-            offset: 0.23437500000000000000000000000000,
+            high_low_mul: 4.266_24,
+            dec_mul: 0.003_921_569,
+            offset: 0.234_375,
             bit_count: 8,
             flags: 2,
             no_scale: false,
         };
         assert_eq!(qf, correct);
-    }
-}
-
-impl fmt::Display for Decoder {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", self)
     }
 }

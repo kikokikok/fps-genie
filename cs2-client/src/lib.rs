@@ -54,37 +54,39 @@ impl AIController {
     }
 
     /// Get aim adjustment based on current game state
-    pub fn get_aim_adjustment(
-        &mut self,
-        health: f32,
-        armor: f32,
-        position: (f32, f32, f32),
-        velocity: (f32, f32, f32),
-        view_angles: (f32, f32),
-        weapon_id: u16,
-        ammo: f32,
-        is_airborne: bool,
-    ) -> Result<(f32, f32)> {
+    pub fn get_aim_adjustment(&mut self, state: &PlayerState) -> Result<(f32, f32)> {
         let input = InputVector {
-            health,
-            armor,
-            pos_x: position.0,
-            pos_y: position.1,
-            pos_z: position.2,
-            vel_x: velocity.0,
-            vel_y: velocity.1,
-            vel_z: velocity.2,
-            yaw: view_angles.0,
-            pitch: view_angles.1,
-            weapon_id_f32: weapon_id as f32,
-            ammo,
-            is_airborne: if is_airborne { 1.0 } else { 0.0 },
+            health: state.health,
+            armor: state.armor,
+            pos_x: state.position.0,
+            pos_y: state.position.1,
+            pos_z: state.position.2,
+            vel_x: state.velocity.0,
+            vel_y: state.velocity.1,
+            vel_z: state.velocity.2,
+            yaw: state.view_angles.0,
+            pitch: state.view_angles.1,
+            weapon_id_f32: state.weapon_id as f32,
+            ammo: state.ammo,
+            is_airborne: if state.is_airborne { 1.0 } else { 0.0 },
             padding: 0.0,
         };
 
         let output = self.client.predict(&input)?;
         Ok((output.delta_yaw, output.delta_pitch))
     }
+}
+
+/// Struct to encapsulate player state for aim adjustment
+pub struct PlayerState {
+    pub health: f32,
+    pub armor: f32,
+    pub position: (f32, f32, f32),
+    pub velocity: (f32, f32, f32),
+    pub view_angles: (f32, f32),
+    pub weapon_id: u16,
+    pub ammo: f32,
+    pub is_airborne: bool,
 }
 
 #[cfg(test)]
@@ -207,16 +209,18 @@ mod tests {
         let server = MockPolicyServer::start();
         let mut controller = AIController::new(server.addr).unwrap();
 
-        let result = controller.get_aim_adjustment(
-            100.0,                // health
-            0.0,                  // armor
-            (100.0, 200.0, 50.0), // position
-            (0.0, 0.0, 0.0),      // velocity
-            (45.0, 30.0),         // view angles
-            1,                    // weapon_id
-            30.0,                 // ammo
-            false,                // is_airborne
-        );
+        let state = PlayerState {
+            health: 100.0,
+            armor: 0.0,
+            position: (100.0, 200.0, 50.0),
+            velocity: (0.0, 0.0, 0.0),
+            view_angles: (45.0, 30.0),
+            weapon_id: 1,
+            ammo: 30.0,
+            is_airborne: false,
+        };
+
+        let result = controller.get_aim_adjustment(&state);
 
         assert!(result.is_ok());
         let (delta_yaw, delta_pitch) = result.unwrap();

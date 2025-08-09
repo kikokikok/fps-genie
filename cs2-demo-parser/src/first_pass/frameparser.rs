@@ -33,6 +33,12 @@ pub enum StartEndType {
     MultithreadingWasNotOk,
 }
 
+impl Default for FrameParser {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FrameParser {
     pub fn new() -> Self {
         FrameParser {
@@ -61,11 +67,11 @@ impl FrameParser {
         })
     }
     #[inline(always)]
-    fn read_frame_mut_ptr(demo_bytes: &[u8], mut ptr: &mut usize) -> Result<Frame, DemoParserError> {
+    fn read_frame_mut_ptr(demo_bytes: &[u8], ptr: &mut usize) -> Result<Frame, DemoParserError> {
         let frame_starts_at = *ptr;
-        let cmd = read_varint(demo_bytes, &mut ptr)?;
-        let tick = read_varint(demo_bytes, &mut ptr)?;
-        let size = read_varint(demo_bytes, &mut ptr)?;
+        let cmd = read_varint(demo_bytes, ptr)?;
+        let tick = read_varint(demo_bytes, ptr)?;
+        let size = read_varint(demo_bytes, ptr)?;
 
         let msg_type = cmd & !64;
         let is_compressed = (cmd & 64) == 64;
@@ -280,7 +286,7 @@ mod tests {
             },
         ];
         let is_ok = check_all_bytes_are_covered(sorted_offsets, 40, s);
-        assert_eq!(is_ok, true);
+        assert!(is_ok);
     }
     #[test]
     fn test_byte_coverage_not_ok_range_gap() {
@@ -303,7 +309,7 @@ mod tests {
             },
         ];
         let is_ok = check_all_bytes_are_covered(sorted_offsets, 30, s);
-        assert_eq!(is_ok, false);
+        assert!(!is_ok);
     }
     #[test]
     fn test_byte_coverage_not_ok_missing_start_byte() {
@@ -326,7 +332,7 @@ mod tests {
             },
         ];
         let is_ok = check_all_bytes_are_covered(sorted_offsets, 50, s);
-        assert_eq!(is_ok, false);
+        assert!(!is_ok);
     }
     #[test]
     fn test_byte_coverage_not_ok_missing_end_byte() {
@@ -349,6 +355,6 @@ mod tests {
             },
         ];
         let is_ok = check_all_bytes_are_covered(sorted_offsets, 33, s);
-        assert_eq!(is_ok, false);
+        assert!(!is_ok);
     }
 }

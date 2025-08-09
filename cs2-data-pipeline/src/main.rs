@@ -3,7 +3,6 @@ use clap::{Parser, Subcommand};
 use sqlx::Row; // Add this import to fix the Row trait issues
 use std::path::PathBuf;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 use cs2_data_pipeline::{DatabaseManager, DemoProcessor, PipelineConfig};
 

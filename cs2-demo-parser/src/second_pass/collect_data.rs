@@ -58,11 +58,10 @@ pub enum CoordinateAxis {
 
 impl<'a> SecondPassParser<'a> {
     pub fn collect_entities(&mut self) {
-        if !self.prop_controller.event_with_velocity {
-            if !self.wanted_ticks.contains(&self.tick) && self.wanted_ticks.len() != 0 || self.wanted_events.len() != 0 {
+        if !self.prop_controller.event_with_velocity
+            && (!self.wanted_ticks.contains(&self.tick) && !self.wanted_ticks.is_empty() || !self.wanted_events.is_empty()) {
                 return;
             }
-        }
         if self.parse_projectiles {
             self.collect_projectiles();
             return;
@@ -98,21 +97,21 @@ impl<'a> SecondPassParser<'a> {
                     match self.find_prop(prop_info, entity_id, player) {
                         Ok(prop) => {
                             let df_this_player = self.df_per_player.get_mut(&player.steamid.unwrap_or(0)).unwrap();
-                            df_this_player.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(Some(prop.clone()));
+                            df_this_player.entry(prop_info.id).or_default().push(Some(prop.clone()));
                         }
                         Err(_e) => {
                             let df_this_player = self.df_per_player.get_mut(&player.steamid.unwrap_or(0)).unwrap();
-                            df_this_player.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(None);
+                            df_this_player.entry(prop_info.id).or_default().push(None);
                         }
                     }
                 } else {
                     match self.find_prop(prop_info, entity_id, player) {
                         Ok(prop) => {
-                            self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(Some(prop));
+                            self.output.entry(prop_info.id).or_default().push(Some(prop));
                         }
                         Err(_e) => {
                             // Ultimate debugger is to print this error
-                            self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(None);
+                            self.output.entry(prop_info.id).or_default().push(None);
                         }
                     }
                 }
@@ -122,68 +121,68 @@ impl<'a> SecondPassParser<'a> {
 
     pub fn find_prop(&self, prop_info: &PropInfo, entity_id: &i32, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         match prop_info.prop_type {
-            PropType::Tick => return self.create_tick(),
-            PropType::Name => return self.create_name(player),
-            PropType::Steamid => return self.create_steamid(player),
-            PropType::Player => return self.get_prop_from_ent(&prop_info.id, &entity_id),
-            PropType::Team => return self.find_team_prop(&prop_info.id, &entity_id),
+            PropType::Tick => self.create_tick(),
+            PropType::Name => self.create_name(player),
+            PropType::Steamid => self.create_steamid(player),
+            PropType::Player => self.get_prop_from_ent(&prop_info.id, entity_id),
+            PropType::Team => self.find_team_prop(&prop_info.id, entity_id),
             PropType::Custom => self.create_custom_prop(prop_info.prop_name.as_str(), entity_id, prop_info, player),
-            PropType::Weapon => return self.find_weapon_prop(&prop_info.id, &entity_id),
-            PropType::Button => return self.get_button_prop(&prop_info, &entity_id),
-            PropType::Controller => return self.get_controller_prop(&prop_info.id, player),
-            PropType::Rules => return self.get_rules_prop(prop_info),
-            PropType::GameTime => return Ok(Variant::F32(self.net_tick as f32 / 64.0)),
+            PropType::Weapon => self.find_weapon_prop(&prop_info.id, entity_id),
+            PropType::Button => self.get_button_prop(prop_info, entity_id),
+            PropType::Controller => self.get_controller_prop(&prop_info.id, player),
+            PropType::Rules => self.get_rules_prop(prop_info),
+            PropType::GameTime => Ok(Variant::F32(self.net_tick as f32 / 64.0)),
         }
     }
     pub fn get_prop_from_ent(&self, prop_id: &u32, entity_id: &i32) -> Result<Variant, PropCollectionError> {
         match self.entities.get(*entity_id as usize) {
-            Some(Some(e)) => match e.props.get(&prop_id) {
-                None => return Err(PropCollectionError::GetPropFromEntPropNotFound),
-                Some(prop) => return Ok(prop.clone()),
+            Some(Some(e)) => match e.props.get(prop_id) {
+                None => Err(PropCollectionError::GetPropFromEntPropNotFound),
+                Some(prop) => Ok(prop.clone()),
             },
-            _ => return Err(PropCollectionError::GetPropFromEntEntityNotFound),
+            _ => Err(PropCollectionError::GetPropFromEntEntityNotFound),
         }
     }
     fn create_tick(&self) -> Result<Variant, PropCollectionError> {
         // This can't actually fail
-        return Ok(Variant::I32(self.tick));
+        Ok(Variant::I32(self.tick))
     }
     pub fn create_steamid(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         match player.steamid {
-            Some(steamid) => return Ok(Variant::U64(steamid)),
+            Some(steamid) => Ok(Variant::U64(steamid)),
             // Revisit this as it was related to pandas null support with u64's
-            _ => return Ok(Variant::U64(0)),
+            _ => Ok(Variant::U64(0)),
         }
     }
     pub fn create_name(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         match &player.name {
-            Some(name) => return Ok(Variant::String(name.to_string())),
-            _ => return Err(PropCollectionError::PlayerMetaDataNameNone),
+            Some(name) => Ok(Variant::String(name.to_string())),
+            _ => Err(PropCollectionError::PlayerMetaDataNameNone),
         }
     }
     pub fn get_button_prop(&self, prop_info: &PropInfo, entity_id: &i32) -> Result<Variant, PropCollectionError> {
         match self.prop_controller.special_ids.buttons {
             None => Err(PropCollectionError::ButtonsSpecialIDNone),
-            Some(button_id) => match self.get_prop_from_ent(&button_id, &entity_id) {
+            Some(button_id) => match self.get_prop_from_ent(&button_id, entity_id) {
                 Ok(Variant::U64(button_mask)) => match BUTTONMAP.get(&prop_info.prop_name) {
                     Some(button_flag) => Ok(Variant::Bool(button_mask & button_flag != 0)),
-                    None => return Err(PropCollectionError::ButtonsMapNoEntryFound),
+                    None => Err(PropCollectionError::ButtonsMapNoEntryFound),
                 },
-                Ok(_) => return Err(PropCollectionError::ButtonMaskNotU64Variant),
+                Ok(_) => Err(PropCollectionError::ButtonMaskNotU64Variant),
                 Err(e) => Err(e),
             },
         }
     }
     pub fn get_rules_prop(&self, prop_info: &PropInfo) -> Result<Variant, PropCollectionError> {
         match self.rules_entity_id {
-            Some(entid) => return self.get_prop_from_ent(&prop_info.id, &entid),
-            None => return Err(PropCollectionError::RulesEntityIdNotSet),
+            Some(entid) => self.get_prop_from_ent(&prop_info.id, &entid),
+            None => Err(PropCollectionError::RulesEntityIdNotSet),
         }
     }
     pub fn get_controller_prop(&self, prop_id: &u32, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         match player.controller_entid {
-            Some(entid) => return self.get_prop_from_ent(prop_id, &entid),
-            None => return Err(PropCollectionError::ControllerEntityIdNotSet),
+            Some(entid) => self.get_prop_from_ent(prop_id, &entid),
+            None => Err(PropCollectionError::ControllerEntityIdNotSet),
         }
     }
     fn find_owner_entid(&self, entity_id: &i32) -> Result<u32, PropCollectionError> {
@@ -193,8 +192,8 @@ impl<'a> SecondPassParser<'a> {
         };
         match self.get_prop_from_ent(&owner_id, entity_id) {
             Ok(Variant::U32(prop)) => Ok(prop & 0x7FF),
-            Ok(_) => return Err(PropCollectionError::GrenadeOwnerIdPropIncorrectVariant),
-            Err(e) => return Err(e),
+            Ok(_) => Err(PropCollectionError::GrenadeOwnerIdPropIncorrectVariant),
+            Err(e) => Err(e),
         }
     }
     pub fn find_player_metadata(&self, entity_id: i32) -> Result<&PlayerMetaData, PropCollectionError> {
@@ -272,7 +271,7 @@ impl<'a> SecondPassParser<'a> {
                 (GRENADE_Z, z),
             ];
             for pair in pairs {
-                self.output.entry(pair.0).or_insert_with(|| PropColumn::new()).push(pair.1);
+                self.output.entry(pair.0).or_default().push(pair.1);
             }
 
             for prop_info in &self.prop_controller.prop_infos {
@@ -288,16 +287,13 @@ impl<'a> SecondPassParser<'a> {
                 {
                     continue;
                 }
-                let prop = match self.get_prop_from_ent(&prop_info.id, &projectile_entid) {
-                    Ok(p) => Some(p),
-                    _ => None,
-                };
+                let prop = self.get_prop_from_ent(&prop_info.id, projectile_entid).ok();
                 match prop {
                     Some(prop) => {
-                        self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(Some(prop));
+                        self.output.entry(prop_info.id).or_default().push(Some(prop));
                     }
                     None => {
-                        self.output.entry(prop_info.id).or_insert_with(|| PropColumn::new()).push(None);
+                        self.output.entry(prop_info.id).or_default().push(None);
                     }
                 }
             }
@@ -312,11 +308,11 @@ impl<'a> SecondPassParser<'a> {
         match self.find_weapon_prop(&item_def_id, entity_id) {
             Ok(Variant::U32(def_idx)) => {
                 match WEAPINDICIES.get(&def_idx) {
-                    Some(v) => return Ok(Variant::String(v.to_string())),
-                    None => return Err(PropCollectionError::WeaponIdxMappingNotFound),
-                };
+                    Some(v) => Ok(Variant::String(v.to_string())),
+                    None => Err(PropCollectionError::WeaponIdxMappingNotFound),
+                }
             }
-            Ok(_) => return Err(PropCollectionError::WeaponDefVariantWrongType),
+            Ok(_) => Err(PropCollectionError::WeaponDefVariantWrongType),
             Err(e) => Err(e),
         }
     }
@@ -413,9 +409,9 @@ impl<'a> SecondPassParser<'a> {
     fn find_pitch_or_yaw(&self, entity_id: &i32, idx: usize) -> Result<Variant, PropCollectionError> {
         match self.prop_controller.special_ids.eye_angles {
             Some(prop_id) => match self.get_prop_from_ent(&prop_id, entity_id) {
-                Ok(Variant::VecXYZ(v)) => return Ok(Variant::F32(v[idx])),
-                Ok(_) => return Err(PropCollectionError::EyeAnglesWrongVariant),
-                Err(e) => return Err(e),
+                Ok(Variant::VecXYZ(v)) => Ok(Variant::F32(v[idx])),
+                Ok(_) => Err(PropCollectionError::EyeAnglesWrongVariant),
+                Err(e) => Err(e),
             },
             None => Err(PropCollectionError::SpecialidsEyeAnglesNotSet),
         }
@@ -442,12 +438,12 @@ impl<'a> SecondPassParser<'a> {
             "inventory_as_ids" => self.find_my_inventory_as_ids(entity_id),
             "inventory_as_bitmask" => self.find_my_inventory_as_bitmask(entity_id),
             "CCSPlayerPawn.m_bSpottedByMask" => self.find_spotted(entity_id, prop_info),
-            "entity_id" => return Ok(Variant::I32(*entity_id)),
-            "is_alive" => return self.find_is_alive(entity_id),
-            "user_id" => return self.get_userid(player),
+            "entity_id" => Ok(Variant::I32(*entity_id)),
+            "is_alive" => self.find_is_alive(entity_id),
+            "user_id" => self.get_userid(player),
             "is_airborne" => self.find_is_airborne(player),
-            "agent_skin" => return self.find_agent_skin(player),
-            "CCSPlayerController.m_iCompTeammateColor" => return self.find_player_color(player, prop_info),
+            "agent_skin" => self.find_agent_skin(player),
+            "CCSPlayerController.m_iCompTeammateColor" => self.find_player_color(player, prop_info),
             "usercmd_input_history" => self.get_prop_from_ent(&USERCMD_INPUT_HISTORY_BASEID, entity_id),
             "glove_paint_id" => self.find_glove_skin_id(entity_id),
             "glove_paint_seed" => self.find_glove_paint_seed(entity_id),
@@ -456,7 +452,7 @@ impl<'a> SecondPassParser<'a> {
         }
     }
     pub fn get_userid(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
-        for (_, st_player) in &self.stringtable_players {
+        for st_player in self.stringtable_players.values() {
             if player.steamid == Some(st_player.steamid) {
                 return Ok(Variant::I32(st_player.userid));
             }
@@ -477,7 +473,7 @@ impl<'a> SecondPassParser<'a> {
     pub fn find_is_airborne(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         if let Some(player_entity_id) = &player.player_entity_id {
             if let Some(id) = self.prop_controller.special_ids.is_airborn {
-                if let Ok(Variant::U32(airborn_h)) = self.get_prop_from_ent(&id, &player_entity_id) {
+                if let Ok(Variant::U32(airborn_h)) = self.get_prop_from_ent(&id, player_entity_id) {
                     return Ok(Variant::Bool(airborn_h == IS_AIRBORNE_CONST));
                 }
             }
@@ -486,7 +482,7 @@ impl<'a> SecondPassParser<'a> {
     }
     pub fn find_skin_float(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         if let Some(player_entity_id) = &player.player_entity_id {
-            return self.find_weapon_prop(&WEAPON_FLOAT, &player_entity_id);
+            return self.find_weapon_prop(&WEAPON_FLOAT, player_entity_id);
         }
         Err(PropCollectionError::PlayerNotFound)
     }
@@ -521,7 +517,7 @@ impl<'a> SecondPassParser<'a> {
                 stickers.push(sticker);
             }
         }
-        return Ok(Variant::Stickers(stickers));
+        Ok(Variant::Stickers(stickers))
     }
     fn find_sticker(&self, entity_id: &i32, sticker_id_id: u32, sticker_wear_id: u32, sticker_x: u32, sticker_y: u32) -> Option<Sticker> {
         let id = self.get_prop_from_ent(&sticker_id_id, entity_id);
@@ -541,11 +537,11 @@ impl<'a> SecondPassParser<'a> {
     }
     pub fn find_skin_paint_seed(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         if let Some(player_entity_id) = &player.player_entity_id {
-            if let Ok(Variant::F32(f)) = self.find_weapon_prop(&WEAPON_PAINT_SEED, &player_entity_id) {
+            if let Ok(Variant::F32(f)) = self.find_weapon_prop(&WEAPON_PAINT_SEED, player_entity_id) {
                 return Ok(Variant::U32(f as u32));
             }
         }
-        return Ok(Variant::U32(0));
+        Ok(Variant::U32(0))
     }
     pub fn find_agent_skin(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
         let id = match self.prop_controller.special_ids.agent_skin_idx {
@@ -554,11 +550,11 @@ impl<'a> SecondPassParser<'a> {
         };
         match self.get_controller_prop(&id, player) {
             Ok(Variant::U32(agent_id)) => match AGENTSMAP.get(&agent_id) {
-                Some(agent) => return Ok(Variant::String(agent.to_string())),
-                None => return Err(PropCollectionError::AgentIdNotFound),
+                Some(agent) => Ok(Variant::String(agent.to_string())),
+                None => Err(PropCollectionError::AgentIdNotFound),
             },
-            Ok(_) => return Err(PropCollectionError::AgentIncorrectVariant),
-            Err(_) => return Err(PropCollectionError::AgentPropNotFound),
+            Ok(_) => Err(PropCollectionError::AgentIncorrectVariant),
+            Err(_) => Err(PropCollectionError::AgentPropNotFound),
         }
     }
     pub fn collect_velocity(&self, player: &PlayerMetaData) -> Result<Variant, PropCollectionError> {
@@ -573,15 +569,15 @@ impl<'a> SecondPassParser<'a> {
                 return Ok(Variant::F32((f32::powi(x, 2) + f32::powi(y, 2)).sqrt()));
             }
         }
-        return Err(PropCollectionError::PlayerNotFound);
+        Err(PropCollectionError::PlayerNotFound)
     }
     pub fn collect_velocity_axis(&self, player: &PlayerMetaData, axis: CoordinateAxis) -> Result<Variant, PropCollectionError> {
         if let Some(s) = player.steamid {
             let steamids = self.output.get(&STEAMID_ID);
             let indicies = self.find_wanted_indicies(steamids, s);
-            return Ok(self.velocity_from_indicies(&indicies, axis)?);
+            return self.velocity_from_indicies(&indicies, axis);
         }
-        return Err(PropCollectionError::PlayerNotFound);
+        Err(PropCollectionError::PlayerNotFound)
     }
     fn find_most_recent_coordinate_idx(&self, optv: Option<&PropColumn>, wanted_steamid: u64) -> Option<usize> {
         if let Some(v) = optv {
@@ -628,7 +624,7 @@ impl<'a> SecondPassParser<'a> {
                 return Ok(Variant::F32((v1 * 64.0) - (v2 * 64.0)));
             }
         }
-        return Err(PropCollectionError::VelocityNotFound);
+        Err(PropCollectionError::VelocityNotFound)
     }
     fn index_coordinates_from_propcol(&self, propcol: &PropColumn, indicies: &[usize]) -> Option<(Option<f32>, Option<f32>)> {
         if indicies.len() != 2 {
@@ -643,30 +639,27 @@ impl<'a> SecondPassParser<'a> {
     }
 
     pub fn find_is_alive(&self, entity_id: &i32) -> Result<Variant, PropCollectionError> {
-        match self.prop_controller.special_ids.life_state {
-            Some(id) => match self.get_prop_from_ent(&id, entity_id) {
-                Ok(Variant::U32(0)) => return Ok(Variant::Bool(true)),
-                Ok(_) => {}
-                Err(_) => {}
-            },
-            None => {}
-        }
+        if let Some(id) = self.prop_controller.special_ids.life_state { match self.get_prop_from_ent(&id, entity_id) {
+            Ok(Variant::U32(0)) => return Ok(Variant::Bool(true)),
+            Ok(_) => {}
+            Err(_) => {}
+        } }
         Ok(Variant::Bool(false))
     }
     pub fn find_spotted(&self, entity_id: &i32, prop_info: &PropInfo) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&prop_info.id, entity_id) {
             Ok(Variant::U32(mask)) => {
-                return Ok(Variant::U64Vec(self.steamids_from_mask(mask)));
+                Ok(Variant::U64Vec(self.steamids_from_mask(mask)))
             }
-            Ok(_) => return Err(PropCollectionError::SpottedIncorrectVariant),
-            Err(e) => return Err(e),
+            Ok(_) => Err(PropCollectionError::SpottedIncorrectVariant),
+            Err(e) => Err(e),
         }
     }
     fn steamids_from_mask(&self, uid: u32) -> Vec<u64> {
         let mut steamids = vec![];
         for i in 0..16 {
             if (uid & (1 << i)) != 0 {
-                if let Some(user) = self.find_user_by_controller_id((i + 1) as i32) {
+                if let Some(user) = self.find_user_by_controller_id(i + 1) {
                     steamids.push(user.steamid.unwrap_or(0))
                 }
             }
@@ -681,13 +674,13 @@ impl<'a> SecondPassParser<'a> {
             Ok(Variant::Bool(true)) => {}
             _ => return Ok(Variant::StringVec(vec![])),
         };
-        let inventory_max_len = match self.get_prop_from_ent(&(MY_WEAPONS_OFFSET as u32), entity_id) {
+        let inventory_max_len = match self.get_prop_from_ent(&{ MY_WEAPONS_OFFSET }, entity_id) {
             Ok(Variant::U32(p)) => p,
             _ => return Err(PropCollectionError::InventoryMaxNotFound),
         };
         for i in 1..inventory_max_len + 1 {
             let prop_id = MY_WEAPONS_OFFSET + i;
-            match self.get_prop_from_ent(&(prop_id as u32), entity_id) {
+            match self.get_prop_from_ent(&{ prop_id }, entity_id) {
                 Err(_e) => {}
                 Ok(Variant::U32(x)) => {
                     let eid = (x & ((1 << 14) - 1)) as i32;
@@ -718,14 +711,14 @@ impl<'a> SecondPassParser<'a> {
             Ok(Variant::Bool(true)) => {}
             _ => return Ok(Variant::U32Vec(vec![])),
         };
-        let inventory_max_len = match self.get_prop_from_ent(&(MY_WEAPONS_OFFSET as u32), entity_id) {
+        let inventory_max_len = match self.get_prop_from_ent(&{ MY_WEAPONS_OFFSET }, entity_id) {
             Ok(Variant::U32(p)) => p,
             _ => return Err(PropCollectionError::InventoryMaxNotFound),
         };
 
         for i in 1..inventory_max_len + 1 {
             let prop_id = MY_WEAPONS_OFFSET + i;
-            match self.get_prop_from_ent(&(prop_id as u32), entity_id) {
+            match self.get_prop_from_ent(&{ prop_id }, entity_id) {
                 Err(_e) => {}
                 Ok(Variant::U32(x)) => {
                     let eid = (x & ((1 << 14) - 1)) as i32;
@@ -755,14 +748,14 @@ impl<'a> SecondPassParser<'a> {
             Ok(Variant::Bool(true)) => {}
             _ => return Ok(Variant::U64(0)),
         };
-        let inventory_max_len = match self.get_prop_from_ent(&(MY_WEAPONS_OFFSET as u32), entity_id) {
+        let inventory_max_len = match self.get_prop_from_ent(&{ MY_WEAPONS_OFFSET }, entity_id) {
             Ok(Variant::U32(p)) => p,
             _ => return Err(PropCollectionError::InventoryMaxNotFound),
         };
 
         for i in 1..inventory_max_len + 1 {
             let prop_id = MY_WEAPONS_OFFSET + i;
-            match self.get_prop_from_ent(&(prop_id as u32), entity_id) {
+            match self.get_prop_from_ent(&{ prop_id }, entity_id) {
                 Err(_e) => {}
                 Ok(Variant::U32(x)) => {
                     let eid = (x & ((1 << 14) - 1)) as i32;
@@ -788,18 +781,18 @@ impl<'a> SecondPassParser<'a> {
     fn insert_equipment_id_bitmask(&self, bitmask: &mut u64, res: Variant, player_entid: &i32) {
         if let Variant::U32(def_idx) = res {
             match WEAPINDICIES.get(&def_idx) {
-                None => return,
+                None => (),
                 Some(weap_name) => {
-                    match weap_name {
+                    match *weap_name {
                         // Check how many flashbangs player has (only prop that works like this)
-                        &"flashbang" => {
+                        "flashbang" => {
                             if let Ok(Variant::U32(2)) = self.get_prop_from_ent(&GRENADE_AMMO_ID, player_entid) {
                                 *bitmask |= 1 << def_idx;
                             }
                             *bitmask |= 1 << def_idx;
                         }
                         // c4 seems bugged. Find c4 entity and check owner from it.
-                        &"c4" => {
+                        "c4" => {
                             if let Some(c4_owner_id) = self.find_c4_owner() {
                                 if *player_entid == c4_owner_id {
                                     *bitmask |= 1 << def_idx;
@@ -811,24 +804,24 @@ impl<'a> SecondPassParser<'a> {
                         }
                     }
                 }
-            };
+            }
         }
     }
     fn insert_equipment_id(&self, names: &mut Vec<u32>, res: Variant, player_entid: &i32) {
         if let Variant::U32(def_idx) = res {
             match WEAPINDICIES.get(&def_idx) {
-                None => return,
+                None => (),
                 Some(weap_name) => {
-                    match weap_name {
+                    match *weap_name {
                         // Check how many flashbangs player has (only prop that works like this)
-                        &"flashbang" => {
+                        "flashbang" => {
                             if let Ok(Variant::U32(2)) = self.get_prop_from_ent(&GRENADE_AMMO_ID, player_entid) {
                                 names.push(def_idx);
                             }
                             names.push(def_idx);
                         }
                         // c4 seems bugged. Find c4 entity and check owner from it.
-                        &"c4" => {
+                        "c4" => {
                             if let Some(c4_owner_id) = self.find_c4_owner() {
                                 if *player_entid == c4_owner_id {
                                     names.push(def_idx);
@@ -840,25 +833,25 @@ impl<'a> SecondPassParser<'a> {
                         }
                     }
                 }
-            };
+            }
         }
     }
 
     fn insert_equipment_name(&self, names: &mut Vec<String>, res: Variant, player_entid: &i32) {
         if let Variant::U32(def_idx) = res {
             match WEAPINDICIES.get(&def_idx) {
-                None => return,
+                None => (),
                 Some(weap_name) => {
-                    match weap_name {
+                    match *weap_name {
                         // Check how many flashbangs player has (only prop that works like this)
-                        &"flashbang" => {
+                        "flashbang" => {
                             if let Ok(Variant::U32(2)) = self.get_prop_from_ent(&GRENADE_AMMO_ID, player_entid) {
                                 names.push(weap_name.to_string());
                             }
                             names.push(weap_name.to_string());
                         }
                         // c4 seems bugged. Find c4 entity and check owner from it.
-                        &"c4" => {
+                        "c4" => {
                             if let Some(c4_owner_id) = self.find_c4_owner() {
                                 if *player_entid == c4_owner_id {
                                     names.push(weap_name.to_string());
@@ -870,7 +863,7 @@ impl<'a> SecondPassParser<'a> {
                         }
                     }
                 }
-            };
+            }
         }
     }
     fn find_c4_owner(&self) -> Option<i32> {
@@ -917,11 +910,11 @@ impl<'a> SecondPassParser<'a> {
                         None => Err(PropCollectionError::WeaponSkinNoSkinMapping),
                     }
                 } else {
-                    return Err(PropCollectionError::WeaponSkinFloatConvertionError);
+                    Err(PropCollectionError::WeaponSkinFloatConvertionError)
                 }
             }
-            Ok(_) => return Err(PropCollectionError::WeaponSkinIdxIncorrectVariant),
-            Err(e) => return Err(e),
+            Ok(_) => Err(PropCollectionError::WeaponSkinIdxIncorrectVariant),
+            Err(e) => Err(e),
         }
     }
     pub fn find_weapon_skin_id_from_player(&self, player_entid: &i32) -> Result<Variant, PropCollectionError> {
@@ -929,27 +922,27 @@ impl<'a> SecondPassParser<'a> {
             Some(p) => p,
             None => return Err(PropCollectionError::SpecialidsActiveWeaponNotSet),
         };
-        return match self.get_prop_from_ent(&p, player_entid) {
+        match self.get_prop_from_ent(&p, player_entid) {
             Ok(Variant::U32(weap_handle)) => {
                 let weapon_entity_id = (weap_handle & 0x7FF) as i32;
                 self.find_weapon_skin_id(&weapon_entity_id)
             }
             Ok(_) => Err(PropCollectionError::WeaponHandleIncorrectVariant),
             Err(e) => Err(e),
-        };
+        }
     }
     pub fn find_weapon_skin_id(&self, weapon_entity_id: &i32) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&WEAPON_SKIN_ID, weapon_entity_id) {
             Ok(Variant::F32(f)) => {
                 // The value is stored as a float for some reason
                 if f.fract() == 0.0 && f >= 0.0 {
-                    return Ok(Variant::U32(f as u32));
+                    Ok(Variant::U32(f as u32))
                 } else {
-                    return Err(PropCollectionError::WeaponSkinFloatConvertionError);
+                    Err(PropCollectionError::WeaponSkinFloatConvertionError)
                 }
             }
-            Ok(_) => return Err(PropCollectionError::WeaponSkinIdxIncorrectVariant),
-            Err(e) => return Err(e),
+            Ok(_) => Err(PropCollectionError::WeaponSkinIdxIncorrectVariant),
+            Err(e) => Err(e),
         }
     }
     pub fn find_weapon_skin_from_player(&self, player_entid: &i32) -> Result<Variant, PropCollectionError> {
@@ -957,41 +950,41 @@ impl<'a> SecondPassParser<'a> {
             Some(p) => p,
             None => return Err(PropCollectionError::SpecialidsActiveWeaponNotSet),
         };
-        return match self.get_prop_from_ent(&p, player_entid) {
+        match self.get_prop_from_ent(&p, player_entid) {
             Ok(Variant::U32(weap_handle)) => {
                 let weapon_entity_id = (weap_handle & 0x7FF) as i32;
                 self.find_weapon_skin(&weapon_entity_id)
             }
             Ok(_) => Err(PropCollectionError::WeaponHandleIncorrectVariant),
             Err(e) => Err(e),
-        };
+        }
     }
     pub fn find_glove_skin_id(&self, player_entid: &i32) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&GLOVE_PAINT_ID, player_entid) {
             Ok(Variant::F32(f)) => {
                 // The value is stored as a float for some reason
                 if f.fract() == 0.0 && f >= 0.0 {
-                    return Ok(Variant::U32(f as u32));
+                    Ok(Variant::U32(f as u32))
                 } else {
-                    return Err(PropCollectionError::GloveSkinFloatConvertionError);
+                    Err(PropCollectionError::GloveSkinFloatConvertionError)
                 }
             }
-            Ok(_) => return Err(PropCollectionError::GloveSkinIdxIncorrectVariant),
-            Err(e) => return Err(e),
+            Ok(_) => Err(PropCollectionError::GloveSkinIdxIncorrectVariant),
+            Err(e) => Err(e),
         }
     }
 
     pub fn find_glove_paint_seed(&self, player_entid: &i32) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&GLOVE_PAINT_SEED, player_entid) {
             Ok(p) => Ok(p),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
     pub fn find_glove_paint_float(&self, player_entid: &i32) -> Result<Variant, PropCollectionError> {
         match self.get_prop_from_ent(&GLOVE_PAINT_FLOAT, player_entid) {
             Ok(p) => Ok(p),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -1004,7 +997,7 @@ impl<'a> SecondPassParser<'a> {
             Ok(Variant::U32(weap_handle)) => {
                 // Could be more specific
                 let weapon_entity_id = (weap_handle & 0x7FF) as i32;
-                match self.get_prop_from_ent(&prop, &weapon_entity_id) {
+                match self.get_prop_from_ent(prop, &weapon_entity_id) {
                     Ok(p) => Ok(p),
                     Err(e) => match e {
                         PropCollectionError::GetPropFromEntEntityNotFound => Err(PropCollectionError::WeaponEntityNotFound),
@@ -1019,7 +1012,7 @@ impl<'a> SecondPassParser<'a> {
     }
     pub fn find_team_prop(&self, prop: &u32, player_entid: &i32) -> Result<Variant, PropCollectionError> {
         match self.prop_controller.special_ids.player_team_pointer {
-            None => return Err(PropCollectionError::SpecialidsPlayerTeamPointerNotSet),
+            None => Err(PropCollectionError::SpecialidsPlayerTeamPointerNotSet),
             Some(p) => {
                 match self.get_prop_from_ent(&p, player_entid) {
                     Ok(Variant::U32(team_num)) => {
@@ -1032,8 +1025,8 @@ impl<'a> SecondPassParser<'a> {
                         };
                         // Get prop from team entity
                         match team_entid {
-                            Some(eid) => return self.get_prop_from_ent(prop, &eid),
-                            None => return Err(PropCollectionError::TeamEntityIdNotSet),
+                            Some(eid) => self.get_prop_from_ent(prop, &eid),
+                            None => Err(PropCollectionError::TeamEntityIdNotSet),
                         }
                     }
                     Ok(_) => Err(PropCollectionError::TeamNumIncorrectVariant),
@@ -1107,11 +1100,8 @@ impl<'a> SecondPassParser<'a> {
         };
         if let Some(e) = player_entid {
             if e != PLAYER_ENTITY_HANDLE_MISSING && steamid != Some(0) && team_num != Some(SPECTATOR_TEAM_NUM) {
-                match self.should_remove(steamid) {
-                    Some(eid) => {
-                        self.players.remove(&eid);
-                    }
-                    None => {}
+                if let Some(eid) = self.should_remove(steamid) {
+                    self.players.remove(&eid);
                 }
                 self.players.insert(
                     e,
@@ -1141,7 +1131,7 @@ fn coord_from_cell(cell: Result<Variant, PropCollectionError>, offset: Result<Va
     // Both cell and offset are needed for calculation
     match (offset, cell) {
         (Ok(Variant::F32(offset)), Ok(Variant::U32(cell))) => {
-            let cell_coord = ((cell as f32 * (1 << CELL_BITS) as f32) - MAX_COORD) as f32;
+            let cell_coord = (cell as f32 * (1 << CELL_BITS) as f32) - MAX_COORD;
             Ok(cell_coord + offset)
         }
         (Err(_), Err(_)) => Err(PropCollectionError::CoordinateBothNone),

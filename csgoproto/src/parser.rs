@@ -157,7 +157,7 @@ impl TryFrom<&str> for Translation {
                 }
             }
         }
-        Err(Self::Error::new(std::io::ErrorKind::Other, "Cannot read translation tokens"))
+        Err(Self::Error::other("Cannot read translation tokens"))
     }
 }
 
@@ -186,7 +186,7 @@ impl TryFrom<&str> for GameItems {
                 return Ok(GameItems { hashmap: items_game });
             }
         }
-        Err(Self::Error::new(std::io::ErrorKind::Other, "Cannot read game items"))
+        Err(Self::Error::other("Cannot read game items"))
     }
 }
 

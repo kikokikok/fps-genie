@@ -116,7 +116,7 @@ impl<'a> FirstPassParser<'a> {
                 inputs.wanted_prop_states.clone(),
                 inputs.real_name_to_og_name.clone(),
                 false,
-                &vec!["None".to_string()],
+                &["None".to_string()],
                 inputs.parse_projectiles,
             ),
             cls_by_id: None,
@@ -128,7 +128,7 @@ impl<'a> FirstPassParser<'a> {
             ptr: 0,
             baselines: AHashMap::default(),
             tick: 0,
-            huf: &inputs.huffman_lookup_table,
+            huf: inputs.huffman_lookup_table,
             qf_mapper: QfMapper {
                 idx: 0,
                 map: AHashMap::default(),
@@ -144,7 +144,7 @@ impl<'a> FirstPassParser<'a> {
             wanted_ticks: AHashSet::from_iter(inputs.wanted_ticks.iter().cloned()),
             wanted_other_props: inputs.wanted_other_props.clone(),
             wanted_prop_states: inputs.wanted_prop_states.clone(),
-            settings: &inputs,
+            settings: inputs,
             controller_ids: SpecialIDs::new(),
             id: 0,
             wanted_prop_ids: vec![],
@@ -180,7 +180,7 @@ pub fn rm_map_user_friendly_names(map: &AHashMap<String, Variant>) -> Result<AHa
     let mut real_names_map: AHashMap<String, Variant> = AHashMap::default();
     for (name, variant) in map {
         let n = if name.starts_with("Weapon.") { name.split_at(7).1 } else { name };
-        match FRIENDLY_NAMES_MAPPING.get(&n) {
+        match FRIENDLY_NAMES_MAPPING.get(n) {
             Some(real_name) => real_names_map.insert(real_name.to_string(), variant.clone()),
             None => real_names_map.insert(n.to_string(), variant.clone()),
         };

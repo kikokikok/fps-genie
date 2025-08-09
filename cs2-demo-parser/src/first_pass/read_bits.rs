@@ -13,7 +13,7 @@ pub fn read_varint(bytes: &[u8], ptr: &mut usize) -> Result<u32, DemoParserError
     let mut count: u8 = 0;
     loop {
         if count >= 5 {
-            return Ok(result as u32);
+            return Ok(result);
         }
         let b = match bytes.get(*ptr) {
             Some(b) => *b as u32,
@@ -26,7 +26,7 @@ pub fn read_varint(bytes: &[u8], ptr: &mut usize) -> Result<u32, DemoParserError
             break;
         }
     }
-    Ok(result as u32)
+    Ok(result)
 }
 
 impl<'a> Bitreader<'a> {
@@ -60,7 +60,7 @@ impl<'a> Bitreader<'a> {
     }
     #[inline(always)]
     pub fn bits_remaining(&mut self) -> Option<usize> {
-        Some(self.reader.bits_remaining()?)
+        self.reader.bits_remaining()
     }
     #[inline(always)]
     pub fn read_nbits(&mut self, n: u32) -> Result<u32, DemoParserError> {
@@ -69,16 +69,16 @@ impl<'a> Bitreader<'a> {
         }
         let b = self.peek(n);
         self.consume(n);
-        return Ok(b as u32);
+        Ok(b as u32)
     }
     #[inline(always)]
     pub fn read_u_bit_var(&mut self) -> Result<u32, DemoParserError> {
         let bits = self.read_nbits(6)?;
         match bits & 0b110000 {
-            0b10000 => return Ok((bits & 0b1111) | (self.read_nbits(4)? << 4)),
-            0b100000 => return Ok((bits & 0b1111) | (self.read_nbits(8)? << 4)),
-            0b110000 => return Ok((bits & 0b1111) | (self.read_nbits(28)? << 4)),
-            _ => return Ok(bits),
+            0b10000 => Ok((bits & 0b1111) | (self.read_nbits(4)? << 4)),
+            0b100000 => Ok((bits & 0b1111) | (self.read_nbits(8)? << 4)),
+            0b110000 => Ok((bits & 0b1111) | (self.read_nbits(28)? << 4)),
+            _ => Ok(bits),
         }
     }
     #[inline(always)]
@@ -88,7 +88,7 @@ impl<'a> Bitreader<'a> {
         if x & 1 != 0 {
             y = !y;
         }
-        Ok(y as i32)
+        Ok(y)
     }
     #[inline(always)]
     pub fn read_varint(&mut self) -> Result<u32, DemoParserError> {
@@ -173,18 +173,18 @@ impl<'a> Bitreader<'a> {
     }
     pub fn read_ubit_var_fp(&mut self) -> Result<u32, DemoParserError> {
         if self.read_boolean()? {
-            return Ok(self.read_nbits(2)?);
+            return self.read_nbits(2);
         }
         if self.read_boolean()? {
-            return Ok(self.read_nbits(4)?);
+            return self.read_nbits(4);
         }
         if self.read_boolean()? {
-            return Ok(self.read_nbits(10)?);
+            return self.read_nbits(10);
         }
         if self.read_boolean()? {
-            return Ok(self.read_nbits(17)?);
+            return self.read_nbits(17);
         }
-        return Ok(self.read_nbits(31)?);
+        self.read_nbits(31)
     }
     #[inline(always)]
     pub fn read_bit_coord(&mut self) -> Result<f32, DemoParserError> {
@@ -203,7 +203,7 @@ impl<'a> Bitreader<'a> {
             frac_val = self.read_nbits(5)?;
         }
         let resol: f64 = 1.0 / (1 << 5) as f64;
-        let result: f32 = (int_val as f64 + (frac_val as f64 * resol) as f64) as f32;
+        let result: f32 = (int_val as f64 + (frac_val as f64 * resol)) as f32;
         if sign {
             Ok(-result)
         } else {

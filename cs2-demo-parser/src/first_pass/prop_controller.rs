@@ -159,7 +159,7 @@ impl PropController {
             needs_velocity: needs_velocty,
             wanted_prop_states,
             wanted_prop_state_infos: vec![],
-            parse_projectiles: parse_projectiles,
+            parse_projectiles,
         }
     }
 
@@ -197,7 +197,7 @@ impl PropController {
             if self.wanted_player_props.contains(&(custom_prop_name.to_string())) {
                 self.prop_infos.push(PropInfo {
                     id: *custom_prop_id,
-                    prop_type: *TYPEHM.get(&custom_prop_name).unwrap_or(&PropType::Custom),
+                    prop_type: *TYPEHM.get(custom_prop_name).unwrap_or(&PropType::Custom),
                     prop_name: custom_prop_name.to_string(),
                     prop_friendly_name: self
                         .real_name_to_og_name
@@ -211,7 +211,7 @@ impl PropController {
                 self.wanted_prop_state_infos.push(WantedPropStateInfo {
                     base: PropInfo {
                         id: *custom_prop_id,
-                        prop_type: *TYPEHM.get(&custom_prop_name).unwrap_or(&PropType::Custom),
+                        prop_type: *TYPEHM.get(custom_prop_name).unwrap_or(&PropType::Custom),
                         prop_name: custom_prop_name.to_string(),
                         prop_friendly_name: self
                             .real_name_to_og_name
@@ -354,16 +354,15 @@ impl PropController {
             // Mainly for weapon props. For example CAK47.m_iClip1 and CWeaponSCAR20.m_iClip1
             // are the "same" prop. (they have same path and we want to refer to it with one id not ~20)
             Some(id) => {
-                f.prop_id = *id as u32;
+                f.prop_id = *id;
                 self.id_to_name.insert(*id, weap_prop.to_string());
-                self.set_special_ids(&weap_prop, is_grenade_or_weapon, *id);
-                return;
+                self.set_special_ids(weap_prop, is_grenade_or_weapon, *id);
             }
             None => {
                 self.name_to_id.insert(weap_prop.to_string(), self.id);
                 self.id_to_name.insert(self.id, weap_prop.to_string());
-                f.prop_id = self.id as u32;
-                self.set_special_ids(&weap_prop, is_grenade_or_weapon, self.id);
+                f.prop_id = self.id;
+                self.set_special_ids(weap_prop, is_grenade_or_weapon, self.id);
             }
         }
     }
@@ -371,8 +370,8 @@ impl PropController {
     fn insert_propinfo(&mut self, prop_name: &str, f: &mut ValueField) {
         let split_at_dot: Vec<&str> = prop_name.split(".").collect();
 
-        let grenade_or_weapon = is_grenade_or_weapon(&prop_name);
-        let prop_name = split_weapon_prefix_from_prop_name(&prop_name);
+        let grenade_or_weapon = is_grenade_or_weapon(prop_name);
+        let prop_name = split_weapon_prefix_from_prop_name(prop_name);
 
         let prop_name = match grenade_or_weapon {
             true => split_at_dot[1..].join("."),
@@ -398,8 +397,8 @@ impl PropController {
         if let Some(prop_type) = prefix_type {
             if self.wanted_player_props.contains(&prop_name.to_string()) {
                 self.prop_infos.push(PropInfo {
-                    id: f.prop_id as u32,
-                    prop_type: prop_type,
+                    id: f.prop_id,
+                    prop_type,
                     prop_name: prop_name.to_string(),
                     prop_friendly_name: self
                         .real_name_to_og_name
@@ -411,8 +410,8 @@ impl PropController {
             }
             if self.wanted_other_props.contains(&prop_name.to_string()) {
                 self.prop_infos.push(PropInfo {
-                    id: f.prop_id as u32,
-                    prop_type: prop_type,
+                    id: f.prop_id,
+                    prop_type,
                     prop_name: prop_name.to_string(),
                     prop_friendly_name: self
                         .real_name_to_og_name
@@ -425,8 +424,8 @@ impl PropController {
             if let Some(wanted_state) = self.wanted_prop_states.get(&prop_name.to_string()) {
                 self.wanted_prop_state_infos.push(WantedPropStateInfo {
                     base: PropInfo {
-                        id: f.prop_id as u32,
-                        prop_type: prop_type,
+                        id: f.prop_id,
+                        prop_type,
                         prop_name: prop_name.to_string(),
                         prop_friendly_name: self
                             .real_name_to_og_name
@@ -456,33 +455,33 @@ impl PropController {
         self.set_id(&prop_name, f, grenade_or_weapon);
 
         if !prop_already_exists {
-            self.insert_propinfo(&full_name, f);
+            self.insert_propinfo(full_name, f);
         }
         f.should_parse = true;
 
         if full_name == "CCSPlayerPawn.CCSPlayer_WeaponServices.m_hMyWeapons" {
-            f.prop_id = MY_WEAPONS_OFFSET as u32;
+            f.prop_id = MY_WEAPONS_OFFSET;
         }
         if full_name == "CCSPlayerPawn.CCSPlayer_ActionTrackingServices.WeaponPurchaseCount_t.m_nCount" {
-            f.prop_id = ITEM_PURCHASE_COUNT as u32;
+            f.prop_id = ITEM_PURCHASE_COUNT;
         }
         if full_name == "CCSPlayerPawn.CCSPlayer_BuyServices.SellbackPurchaseEntry_t.m_unDefIdx" {
-            f.prop_id = ITEM_PURCHASE_DEF_IDX as u32;
+            f.prop_id = ITEM_PURCHASE_DEF_IDX;
         }
         if full_name == "CCSPlayerPawn.CCSPlayer_BuyServices.SellbackPurchaseEntry_t.m_nCost" {
-            f.prop_id = ITEM_PURCHASE_COST as u32;
+            f.prop_id = ITEM_PURCHASE_COST;
         }
         if full_name == "CCSPlayerPawn.CCSPlayer_ActionTrackingServices.WeaponPurchaseCount_t.m_nItemDefIndex" {
-            f.prop_id = ITEM_PURCHASE_NEW_DEF_IDX as u32;
+            f.prop_id = ITEM_PURCHASE_NEW_DEF_IDX;
         }
         if full_name == "CCSPlayerPawn.CCSPlayer_BuyServices.SellbackPurchaseEntry_t.m_hItem" {
-            f.prop_id = ITEM_PURCHASE_HANDLE as u32;
+            f.prop_id = ITEM_PURCHASE_HANDLE;
         }
         if !full_name.starts_with("CCSPlayerPawn") && prop_name.contains("CEconItemAttribute.m_iRawValue32") {
-            f.prop_id = WEAPON_SKIN_ID as u32;
+            f.prop_id = WEAPON_SKIN_ID;
         }
         if full_name.starts_with("CCSPlayerPawn") && prop_name.contains("CEconItemAttribute.m_iRawValue32") {
-            f.prop_id = GLOVE_PAINT_ID as u32;
+            f.prop_id = GLOVE_PAINT_ID;
         }
 
         self.id += 1;
@@ -548,11 +547,8 @@ impl PropController {
                 }
                 Field::Serializer(ser) => self.traverse_fields(&mut ser.serializer.fields, ser_name.clone() + "." + &ser.serializer.name, path.clone()),
                 Field::Pointer(ser) => self.traverse_fields(&mut ser.serializer.fields, ser_name.clone() + "." + &ser.serializer.name, path.clone()),
-                Field::Array(ser) => match &mut ser.field_enum.as_mut() {
-                    Field::Value(v) => {
-                        self.handle_prop(&(ser_name.clone() + "." + &v.name), v, path);
-                    }
-                    _ => {}
+                Field::Array(ser) => if let Field::Value(v) = &mut ser.field_enum.as_mut() {
+                    self.handle_prop(&(ser_name.clone() + "." + &v.name), v, path);
                 },
                 Field::Vector(_x) => {
                     let vec_path = path.clone();
@@ -560,13 +556,10 @@ impl PropController {
                         match inner {
                             Field::Serializer(s) => {
                                 for (inner_idx, f) in &mut s.serializer.fields.iter_mut().enumerate() {
-                                    match f {
-                                        Field::Value(v) => {
-                                            let mut myp = vec_path.clone();
-                                            myp.push(inner_idx as i32);
-                                            self.handle_prop(&(ser_name.clone() + "." + &v.name), v, myp);
-                                        }
-                                        _ => {}
+                                    if let Field::Value(v) = f {
+                                        let mut myp = vec_path.clone();
+                                        myp.push(inner_idx as i32);
+                                        self.handle_prop(&(ser_name.clone() + "." + &v.name), v, myp);
                                     }
                                 }
                                 self.traverse_fields(&mut s.serializer.fields, ser_name.clone() + "." + &s.serializer.name, path_og.clone())

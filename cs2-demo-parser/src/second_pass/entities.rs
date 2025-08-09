@@ -236,8 +236,8 @@ impl<'a> SecondPassParser<'a> {
         };
 
         for path in self.paths.iter().take(n_updates) {
-            let field = find_field(&path, &class.serializer)?;
-            let field_info = get_propinfo(&field, path);
+            let field = find_field(path, &class.serializer)?;
+            let field_info = get_propinfo(field, path);
             let decoder = get_decoder_from_field(field)?;
             let result = bitreader.decode(&decoder, self.qf_mapper)?;
 
@@ -251,7 +251,7 @@ impl<'a> SecondPassParser<'a> {
             }
             // Custom events
             if !is_fullpacket && !is_baseline {
-                events_to_emit.extend(SecondPassParser::listen_for_events(entity, &result, field, field_info, &self.prop_controller));
+                events_to_emit.extend(SecondPassParser::listen_for_events(entity, &result, field, field_info, self.prop_controller));
             }
             // Debug
             if self.is_debug_mode {
@@ -349,7 +349,7 @@ impl<'a> SecondPassParser<'a> {
         // Insert baselines
         if let Some(baseline_bytes) = self.baselines.get(&cls_id) {
             let b = &baseline_bytes.clone();
-            let mut br = Bitreader::new(&b);
+            let mut br = Bitreader::new(b);
             self.update_entity(&mut br, *entity_id, true, &mut vec![], false)?;
         }
         Ok(())
@@ -374,7 +374,7 @@ impl<'a> SecondPassParser<'a> {
         if is_projectile_prop {
             return Ok(EntityType::Projectile);
         }
-        return Ok(EntityType::Normal);
+        Ok(EntityType::Normal)
     }
 }
 
@@ -407,9 +407,8 @@ fn convert_weapon_prefix_to_general(full_name: &str) -> String {
 }
 fn is_weapon_prop(full_name: &str) -> bool {
     let split_at_dot: Vec<&str> = full_name.split(".").collect();
-    let is_weapon_prop =
-        (split_at_dot[0].contains("Weapon") || split_at_dot[0].contains("AK")) && !split_at_dot[0].contains("Player") || split_at_dot[0].contains("CDEagle");
-    is_weapon_prop
+    
+    (split_at_dot[0].contains("Weapon") || split_at_dot[0].contains("AK")) && !split_at_dot[0].contains("Player") || split_at_dot[0].contains("CDEagle")
 }
 fn is_grenade_prop(full_name: &str) -> bool {
     if full_name.contains("CCSPlayer") {

@@ -301,12 +301,12 @@ pub fn _create_ge_tests() {
 
     let settings = ParserInputs {
         wanted_player_props: wanted_props.clone(),
-        wanted_events: wanted_events,
+        wanted_events,
         real_name_to_og_name: AHashMap::default(),
         wanted_other_props: vec![],
         parse_ents: true,
         wanted_players: vec![],
-        wanted_ticks: (0..5).into_iter().map(|x| x * 10000).collect_vec(),
+        wanted_ticks: (0..5).map(|x| x * 10000).collect_vec(),
         parse_projectiles: false,
         parse_grenades: false,
         only_header: false,
@@ -320,7 +320,7 @@ pub fn _create_ge_tests() {
 
     let mut ds = Parser::new(settings, crate::parse_demo::ParsingMode::ForceSingleThreaded);
     // ds.is_multithreadable = false;
-    let file = File::open("../test_data/test_demo.dem".to_string()).unwrap();
+    let file = File::open("../test_data/test_demo.dem").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
     let d = ds.parse_demo(&mmap).unwrap();
 
@@ -677,12 +677,12 @@ pub fn _create_tests() {
 
     let settings = ParserInputs {
         wanted_player_props: wanted_props.clone(),
-        wanted_events: wanted_events,
+        wanted_events,
         real_name_to_og_name: AHashMap::default(),
         wanted_other_props: vec![],
         parse_ents: true,
         wanted_players: vec![],
-        wanted_ticks: (0..5).into_iter().map(|x| x * 10000).collect_vec(),
+        wanted_ticks: (0..5).map(|x| x * 10000).collect_vec(),
         parse_projectiles: false,
         parse_grenades: false,
         only_header: false,
@@ -695,7 +695,7 @@ pub fn _create_tests() {
     };
 
     let mut ds = Parser::new(settings, crate::parse_demo::ParsingMode::ForceSingleThreaded);
-    let file = File::open("../test_data/test_demo.dem".to_string()).unwrap();
+    let file = File::open("../test_data/test_demo.dem").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
     let d = ds.parse_demo(&mmap).unwrap();
     let mut custom = AHashMap::default();
@@ -740,20 +740,18 @@ pub fn _create_tests() {
             println!("let prop_id = out.1.name_to_id[prop.0];");
             println!("assert_eq!(out.0.df[&prop_id], prop.1);");
             println!("}}");
-        } else {
-            if let Some(name) = custom.get(&k) {
-                let test_name = name.replace(".", "_");
-                let s = "".to_string();
-                let s = s + &format!("fn {}() {{", test_name);
-                let s = s + &format!("let prop = ({:?}, {:?});", name, v);
-                let s = s.replace("[", "vec![");
-                let s = s.replace("\")", "\".to_string())");
+        } else if let Some(name) = custom.get(&k) {
+            let test_name = name.replace(".", "_");
+            let s = "".to_string();
+            let s = s + &format!("fn {}() {{", test_name);
+            let s = s + &format!("let prop = ({:?}, {:?});", name, v);
+            let s = s.replace("[", "vec![");
+            let s = s.replace("\")", "\".to_string())");
 
-                println!("#[test]");
-                println!("{:#?}", s);
-                println!("assert_eq!(out.2[prop.0], prop.1);");
-                println!("}}");
-            }
+            println!("#[test]");
+            println!("{:#?}", s);
+            println!("assert_eq!(out.2[prop.0], prop.1);");
+            println!("}}");
         }
     }
 }
@@ -1050,12 +1048,12 @@ fn create_data() -> (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>
     let settings = ParserInputs {
         fallback_bytes: None,
         wanted_player_props: wanted_props.clone(),
-        wanted_events: wanted_events,
+        wanted_events,
         real_name_to_og_name: AHashMap::default(),
         wanted_other_props: vec![],
         parse_ents: true,
         wanted_players: vec![],
-        wanted_ticks: (0..5).into_iter().map(|x| x * 10000).collect_vec(),
+        wanted_ticks: (0..5).map(|x| x * 10000).collect_vec(),
         parse_projectiles: false,
         parse_grenades: false,
         only_header: false,
@@ -1067,7 +1065,7 @@ fn create_data() -> (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>
     };
 
     let mut ds = Parser::new(settings, crate::parse_demo::ParsingMode::ForceSingleThreaded);
-    let file = File::open("../test_data/test_demo.dem".to_string()).unwrap();
+    let file = File::open("../test_data/test_demo.dem").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
     let out1 = ds.parse_demo(&mmap).unwrap();
 
@@ -1076,12 +1074,12 @@ fn create_data() -> (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>
 
     let settings = ParserInputs {
         wanted_player_props: vec![],
-        wanted_events: wanted_events,
+        wanted_events,
         real_name_to_og_name: AHashMap::default(),
         wanted_other_props: vec![],
         parse_ents: true,
         wanted_players: vec![],
-        wanted_ticks: (0..5).into_iter().map(|x| x * 10000).collect_vec(),
+        wanted_ticks: (0..5).map(|x| x * 10000).collect_vec(),
         parse_projectiles: false,
         parse_grenades: false,
         only_header: false,
@@ -1093,7 +1091,7 @@ fn create_data() -> (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>
         fallback_bytes: None,
     };
     let mut ds = Parser::new(settings, crate::parse_demo::ParsingMode::ForceSingleThreaded);
-    let file = File::open("../test_data/test_demo.dem".to_string()).unwrap();
+    let file = File::open("../test_data/test_demo.dem").unwrap();
     let mmap = unsafe { MmapOptions::new().map(&file).unwrap() };
     let out2 = ds.parse_demo(&mmap).unwrap();
 
@@ -1146,7 +1144,7 @@ fn create_data() -> (DemoOutput, PropController, BTreeMap<String, Vec<GameEvent>
     let mut hm = BTreeMap::default();
 
     for name in events {
-        let mut v = out2.game_events.iter().map(|x| x.clone()).filter(|x| x.name == name).collect_vec();
+        let mut v = out2.game_events.iter().filter(|&x| x.name == name).cloned().collect_vec();
         v.truncate(2);
         hm.insert(name.to_string(), v);
     }

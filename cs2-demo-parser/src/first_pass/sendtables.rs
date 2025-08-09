@@ -126,12 +126,12 @@ impl<'a> FirstPassParser<'a> {
         // Creates fields
         for (idx, field) in fields.iter_mut().enumerate() {
             if let Some(f) = &serializer_msg.fields.get(idx) {
-                *field = Some(self.generate_field_data(f, &serializer_msg, &mut field_type_map, qf_mapper)?);
+                *field = Some(self.generate_field_data(f, serializer_msg, &mut field_type_map, qf_mapper)?);
             }
         }
         // Creates serializers
         for serializer in &serializer_msg.serializers {
-            let mut ser = self.generate_serializer(&serializer, &mut fields, serializer_msg, &mut serializers)?;
+            let mut ser = self.generate_serializer(serializer, &mut fields, serializer_msg, &mut serializers)?;
             if ser.name.contains("Player")
                 || ser.name.contains("Controller")
                 || ser.name.contains("Team")
@@ -190,7 +190,7 @@ impl<'a> FirstPassParser<'a> {
             };
 
             if f.field_enum_type.is_none() {
-                f.field_enum_type = Some(create_field(&sid, f, serializers)?)
+                f.field_enum_type = Some(create_field(sid, f, serializers)?)
             }
             if let Some(Some(f)) = &field_data.get(fi) {
                 if let Some(field) = &f.field_enum_type {
@@ -217,7 +217,7 @@ impl<'a> FirstPassParser<'a> {
             None => return Err(DemoParserError::MalformedMessage),
         };
         let ft = find_field_type(name, field_type_map)?;
-        let mut field = field_from_msg(&msg, &big, ft.clone())?;
+        let mut field = field_from_msg(msg, big, ft.clone())?;
 
         field.category = find_category(&mut field);
         field.decoder = field.find_decoder(qf_mapper);
@@ -449,7 +449,7 @@ pub fn find_field<'b>(fp: &FieldPath, ser: &'b Serializer) -> Result<&'b Field, 
             .get_inner(fp.path[3] as usize)?
             .get_inner(fp.path[4] as usize)?
             .get_inner(fp.path[5] as usize)?),
-        _ => return Err(DemoParserError::IllegalPathOp),
+        _ => Err(DemoParserError::IllegalPathOp),
     }
 }
 pub fn get_decoder_from_field(field: &Field) -> Result<Decoder, DemoParserError> {
@@ -513,7 +513,7 @@ pub fn get_propinfo(field: &Field, path: &FieldPath) -> Option<FieldInfo> {
             fi.prop_id = ITEM_PURCHASE_NEW_DEF_IDX + path.path[2] as u32;
         }
     }
-    return Some(fi);
+    Some(fi)
 }
 
 fn create_field(_sid: &String, fd: &mut ConstructorField, serializers: &AHashMap<String, Serializer>) -> Result<Field, DemoParserError> {
@@ -560,19 +560,11 @@ fn find_field_type(name: &str, field_type_map: &mut AHashMap<String, FieldType>)
             if s.as_str() == "*" {
                 true
             } else {
-                if POINTER_TYPES.contains(&name) {
-                    true
-                } else {
-                    false
-                }
+                POINTER_TYPES.contains(&name)
             }
         }
         None => {
-            if POINTER_TYPES.contains(&name) {
-                true
-            } else {
-                false
-            }
+            POINTER_TYPES.contains(&name)
         }
     };
 
@@ -588,14 +580,11 @@ fn find_field_type(name: &str, field_type_map: &mut AHashMap<String, FieldType>)
         Some(generic) => Some(Box::new(find_field_type(generic.as_str(), field_type_map)?)),
         None => None,
     };
-    ft.count = match captures.get(6) {
-        Some(n) => Some(n.as_str().parse::<i32>().unwrap_or(0)),
-        None => None,
-    };
+    ft.count = captures.get(6).map(|n| n.as_str().parse::<i32>().unwrap_or(0));
     if ft.count.is_some() {
         ft.element_type = Some(Box::new(for_string(field_type_map, to_string(&ft, true))?));
     }
-    return Ok(ft);
+    Ok(ft)
 }
 
 impl ConstructorField {
@@ -604,7 +593,7 @@ impl ConstructorField {
             return Decoder::AmmoDecoder;
         }
         let dec = match BASETYPE_DECODERS.get(&self.field_type.base_type) {
-            Some(decoder) => decoder.clone(),
+            Some(decoder) => *decoder,
             None => match self.field_type.base_type.as_str() {
                 "float32" => self.find_float_decoder(qf_map),
                 "Vector" => self.find_vector_type(3, qf_map),
@@ -644,13 +633,13 @@ impl ConstructorField {
             "m_flSimulationTime" => Decoder::FloatSimulationTimeDecoder,
             _ => {
                 if self.bitcount <= 0 || self.bitcount >= 32 {
-                    return Decoder::NoscaleDecoder;
+                    Decoder::NoscaleDecoder
                 } else {
                     let qf = QuantalizedFloat::new(self.bitcount as u32, Some(self.encode_flags), Some(self.low_value), Some(self.high_value));
                     let idx = qf_map.idx;
                     qf_map.map.insert(idx, qf);
                     qf_map.idx += 1;
-                    return Decoder::QuantalizedFloatDecoder(idx as u8);
+                    Decoder::QuantalizedFloatDecoder(idx as u8)
                 }
             }
         }
@@ -668,22 +657,22 @@ impl ConstructorField {
         }
         let float_type = self.find_float_decoder(qf_map);
         match float_type {
-            NoscaleDecoder => return VectorNoscaleDecoder,
-            FloatCoordDecoder => return VectorFloatCoordDecoder,
+            NoscaleDecoder => VectorNoscaleDecoder,
+            FloatCoordDecoder => VectorFloatCoordDecoder,
             // This one should not happen
-            _ => return Decoder::VectorNormalDecoder,
+            _ => Decoder::VectorNormalDecoder,
         }
     }
 }
 
 pub fn find_category(field: &mut ConstructorField) -> FieldCategory {
-    if is_pointer(&field) {
+    if is_pointer(field) {
         return FieldCategory::Pointer;
     }
-    if is_vector(&field) {
+    if is_vector(field) {
         return FieldCategory::Vector;
     }
-    if is_array(&field) {
+    if is_array(field) {
         return FieldCategory::Array;
     }
     FieldCategory::Value
@@ -706,17 +695,16 @@ pub fn is_vector(field: &ConstructorField) -> bool {
     matches!(field.field_type.base_type.as_str(), "CUtlVector" | "CNetworkUtlVectorBase")
 }
 pub fn is_array(field: &ConstructorField) -> bool {
-    if field.field_type.count.is_some() {
-        if field.field_type.base_type != "char" {
+    if field.field_type.count.is_some()
+        && field.field_type.base_type != "char" {
             return true;
         }
-    }
     false
 }
 
 fn for_string(field_type_map: &mut AHashMap<String, FieldType>, field_type_string: String) -> Result<FieldType, DemoParserError> {
     match field_type_map.get(&field_type_string) {
-        Some(s) => return Ok(s.clone()),
+        Some(s) => Ok(s.clone()),
         None => {
             let result = find_field_type(&field_type_string, field_type_map)?;
             field_type_map.insert(field_type_string, result.clone());
@@ -732,7 +720,7 @@ fn to_string(ft: &FieldType, omit_count: bool) -> String {
 
     if let Some(gt) = &ft.generic_type {
         s += "< ";
-        s += &to_string(&gt, true);
+        s += &to_string(gt, true);
         s += "< ";
     }
     if ft.pointer {
@@ -747,7 +735,7 @@ fn to_string(ft: &FieldType, omit_count: bool) -> String {
     }
     s
 }
-pub const POINTER_TYPES: &'static [&'static str] = &["CBodyComponent", "CLightComponent", "CPhysicsComponent", "CRenderComponent", "CPlayerLocalData"];
+pub const POINTER_TYPES: &[&str] = &["CBodyComponent", "CLightComponent", "CPhysicsComponent", "CRenderComponent", "CPlayerLocalData"];
 #[derive(Debug, Clone)]
 pub struct FieldType {
     pub base_type: String,

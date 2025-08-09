@@ -30,7 +30,7 @@ use prost::Message;
 use serde::ser::SerializeMap;
 use serde::Serialize;
 
-static INTERNALEVENTFIELDS: &'static [&str] = &[
+static INTERNALEVENTFIELDS: &[&str] = &[
     "userid",
     "attacker",
     "assister",
@@ -61,8 +61,8 @@ pub enum GameEventInfo {
     WeaponPurchaseCount((Variant, i32, u32)),
 }
 
-static ENTITIES_FIRST_EVENTS: &'static [&str] = &["inferno_startburn", "decoy_started", "inferno_expire"];
-static REMOVEDEVENTS: &'static [&str] = &["server_cvar"];
+static ENTITIES_FIRST_EVENTS: &[&str] = &["inferno_startburn", "decoy_started", "inferno_expire"];
+static REMOVEDEVENTS: &[&str] = &["server_cvar"];
 
 const ENTITYIDNONE: i32 = 2047;
 // https://developer.valvesoftware.com/wiki/SteamID
@@ -70,7 +70,7 @@ const STEAMID64INDIVIDUALIDENTIFIER: u64 = 0x0110000100000000;
 
 impl<'a> SecondPassParser<'a> {
     pub fn parse_event(&mut self, bytes: &[u8]) -> Result<Option<GameEvent>, DemoParserError> {
-        if self.wanted_events.len() == 0 && self.wanted_events.first() != Some(&"all".to_string()) {
+        if self.wanted_events.is_empty() && self.wanted_events.first() != Some(&"all".to_string()) {
             return Ok(None);
         }
 
@@ -118,7 +118,7 @@ impl<'a> SecondPassParser<'a> {
             // Add extra fields
             event_fields.extend(self.find_extra(&event_fields)?);
             // Remove fields that user does nothing with like userid and user_pawn
-            event_fields.retain(|ref x| !INTERNALEVENTFIELDS.contains(&x.name.as_str()));
+            event_fields.retain(|x| !INTERNALEVENTFIELDS.contains(&x.name.as_str()));
             let mut event = GameEvent {
                 fields: event_fields,
                 name: event_desc.name().to_string(),
@@ -147,7 +147,7 @@ impl<'a> SecondPassParser<'a> {
         for event in events {
             event.fields.extend(self.find_extra(&event.fields)?);
             // Remove fields that user does nothing with like userid and user_pawn
-            event.fields.retain(|ref x| !INTERNALEVENTFIELDS.contains(&x.name.as_str()));
+            event.fields.retain(|x| !INTERNALEVENTFIELDS.contains(&x.name.as_str()));
             let event = GameEvent {
                 fields: event.fields.clone(),
                 name: event.name.to_string(),
@@ -165,20 +165,10 @@ impl<'a> SecondPassParser<'a> {
             }
         }
         // Fallback for old demos?
-        for player in self.stringtable_players.values() {
-            if player.userid == userid {
-                return Some(player);
-            }
-        }
-        return None;
+        self.stringtable_players.values().find(|&player| player.userid == userid).map(|v| v as _)
     }
     pub fn find_user_by_controller_id(&self, userid: i32) -> Option<&PlayerMetaData> {
-        for (_, player) in &self.players {
-            if player.controller_entid == Some(userid) {
-                return Some(player);
-            }
-        }
-        return None;
+        self.players.values().find(|&player| player.controller_entid == Some(userid)).map(|v| v as _)
     }
     pub fn entity_id_from_userid(&self, userid: i32) -> Option<i32> {
         if let Some(userinfo) = self.find_user_by_userid(userid) {
@@ -190,7 +180,7 @@ impl<'a> SecondPassParser<'a> {
                 }
             }
         }
-        return None;
+        None
     }
     pub fn find_extra(&self, fields: &Vec<EventField>) -> Result<Vec<EventField>, DemoParserError> {
         let mut extra_fields = vec![];
@@ -255,12 +245,9 @@ impl<'a> SecondPassParser<'a> {
         Some(pawn_handle & 0x7FF)
     }
     pub fn grenade_owner_entid_from_grenade(&self, id_field: &Option<Variant>) -> Option<i32> {
-        let prop_id = match self.prop_controller.special_ids.grenade_owner_id {
-            Some(id) => id,
-            None => return None,
-        };
+        let prop_id = self.prop_controller.special_ids.grenade_owner_id?;
         if let Some(Variant::I32(id)) = id_field {
-            if let Ok(Variant::U32(entity_id)) = self.get_prop_from_ent(&prop_id, &id) {
+            if let Ok(Variant::U32(entity_id)) = self.get_prop_from_ent(&prop_id, id) {
                 return Some((entity_id & 0x7ff) as i32);
             }
         }
@@ -297,8 +284,8 @@ impl<'a> SecondPassParser<'a> {
         let mut extra_fields = vec![];
         for prop_info in &self.prop_controller.prop_infos {
             let fields = match prop_info.prop_type {
-                PropType::Team => self.find_other_team_props(&prop_info),
-                PropType::Rules => self.find_other_rules_props(&prop_info),
+                PropType::Team => self.find_other_team_props(prop_info),
+                PropType::Rules => self.find_other_rules_props(prop_info),
                 PropType::GameTime => vec![EventField {
                     data: Some(Variant::F32(self.net_tick as f32 / 64.0)),
                     name: "game_time".to_string(),
@@ -313,10 +300,7 @@ impl<'a> SecondPassParser<'a> {
     pub fn find_other_rules_props(&self, prop_info: &PropInfo) -> Vec<EventField> {
         let mut extra_fields = vec![];
         let prop = match self.rules_entity_id {
-            Some(entid) => match self.get_prop_from_ent(&prop_info.id, &entid) {
-                Ok(p) => Some(p),
-                Err(_e) => None,
-            },
+            Some(entid) => self.get_prop_from_ent(&prop_info.id, &entid).ok(),
             None => None,
         };
         extra_fields.push(EventField {
@@ -330,17 +314,11 @@ impl<'a> SecondPassParser<'a> {
         let t = self.teams.team2_entid;
         let ct = self.teams.team3_entid;
         let t_prop = match t {
-            Some(entid) => match self.get_prop_from_ent(&prop_info.id, &entid) {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
+            Some(entid) => self.get_prop_from_ent(&prop_info.id, &entid).ok(),
             None => None,
         };
         let ct_prop = match ct {
-            Some(entid) => match self.get_prop_from_ent(&prop_info.id, &entid) {
-                Ok(p) => Some(p),
-                Err(_) => None,
-            },
+            Some(entid) => self.get_prop_from_ent(&prop_info.id, &entid).ok(),
             None => None,
         };
         extra_fields.push(EventField {
@@ -373,10 +351,7 @@ impl<'a> SecondPassParser<'a> {
                 continue;
             }
             let prop = match self.players.get(&entity_id) {
-                Some(player_md) => match self.find_prop(&prop_info, &entity_id, player_md) {
-                    Ok(p) => Some(p),
-                    Err(_e) => None,
-                },
+                Some(player_md) => self.find_prop(prop_info, &entity_id, player_md).ok(),
                 None => None,
             };
             match prop {
@@ -404,15 +379,12 @@ impl<'a> SecondPassParser<'a> {
             };
         }
         let data = match self.players.get(&entity_id) {
-            Some(player_md) => match &player_md.name {
-                Some(name) => Some(Variant::String(name.clone())),
-                None => None,
-            },
+            Some(player_md) => player_md.name.as_ref().map(|name| Variant::String(name.clone())),
             None => None,
         };
         EventField {
             name: prefix.to_owned() + "_name",
-            data: data,
+            data,
         }
     }
     pub fn create_player_steamid_field(&self, entity_id: i32, prefix: &str) -> EventField {
@@ -423,10 +395,7 @@ impl<'a> SecondPassParser<'a> {
             };
         }
         let data = match self.players.get(&entity_id) {
-            Some(player_md) => match player_md.steamid {
-                Some(steamid) => Some(Variant::String(steamid.to_string())),
-                None => None,
-            },
+            Some(player_md) => player_md.steamid.map(|steamid| Variant::String(steamid.to_string())),
             None => None,
         };
         EventField {
@@ -435,7 +404,7 @@ impl<'a> SecondPassParser<'a> {
         }
     }
     pub fn player_from_steamid32(&self, steamid32: i32) -> Option<i32> {
-        for (_entid, player) in &self.players {
+        for player in self.players.values() {
             if let Some(steamid) = player.steamid {
                 if steamid - STEAMID64INDIVIDUALIDENTIFIER == steamid32 as u64 {
                     if let Some(entity_id) = player.player_entity_id {
@@ -526,60 +495,53 @@ impl<'a> SecondPassParser<'a> {
     }
     fn create_custom_event_weapon_sold(&mut self, events: &[GameEventInfo]) {
         // This event is always emitted and is always removed in the end.
-        events.iter().for_each(|x| match x {
-            GameEventInfo::WeaponPurchaseCount((Variant::U32(0), entid, prop_id)) => {
-                if let Ok(player) = self.find_player_metadata(*entid) {
-                    let mut fields = vec![];
-                    fields.push(EventField {
-                        data: self.create_name(player).ok(),
-                        name: "name".to_string(),
-                    });
-                    fields.push(EventField {
-                        data: Some(Variant::U64(player.steamid.unwrap_or(0))),
-                        name: "steamid".to_string(),
-                    });
-                    fields.push(EventField {
-                        data: Some(Variant::I32(self.tick)),
-                        name: "tick".to_string(),
-                    });
-                    let inventory_slot = prop_id - ITEM_PURCHASE_COUNT;
-                    let def_idx = self.get_prop_from_ent(&(&ITEM_PURCHASE_NEW_DEF_IDX + inventory_slot), entid).ok();
+        events.iter().for_each(|x| if let GameEventInfo::WeaponPurchaseCount((Variant::U32(0), entid, prop_id)) = x {
+            if let Ok(player) = self.find_player_metadata(*entid) {
+                let mut fields = vec![];
+                fields.push(EventField {
+                    data: self.create_name(player).ok(),
+                    name: "name".to_string(),
+                });
+                fields.push(EventField {
+                    data: Some(Variant::U64(player.steamid.unwrap_or(0))),
+                    name: "steamid".to_string(),
+                });
+                fields.push(EventField {
+                    data: Some(Variant::I32(self.tick)),
+                    name: "tick".to_string(),
+                });
+                let inventory_slot = prop_id - ITEM_PURCHASE_COUNT;
+                let def_idx = self.get_prop_from_ent(&(ITEM_PURCHASE_NEW_DEF_IDX + inventory_slot), entid).ok();
 
-                    let name = match def_idx {
-                        Some(Variant::U32(id)) => {
-                            if let Some(name) = WEAPINDICIES.get(&id) {
-                                Some(Variant::String(name.to_string()))
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    };
-                    fields.push(EventField {
-                        data: name,
-                        name: "weapon_name".to_string(),
-                    });
+                let name = match def_idx {
+                    Some(Variant::U32(id)) => {
+                        WEAPINDICIES.get(&id).map(|name| Variant::String(name.to_string()))
+                    }
+                    _ => None,
+                };
+                fields.push(EventField {
+                    data: name,
+                    name: "weapon_name".to_string(),
+                });
 
-                    fields.push(EventField {
-                        data: self.get_prop_from_ent(&(&ITEM_PURCHASE_COST + inventory_slot), entid).ok(),
-                        name: "cost".to_string(),
-                    });
-                    fields.push(EventField {
-                        data: Some(Variant::U32(inventory_slot)),
-                        name: "inventory_slot".to_string(),
-                    });
-                    fields.extend(self.find_extra_props_events(*entid, "user"));
-                    fields.extend(self.find_non_player_props());
-                    let ge = GameEvent {
-                        name: "item_sold".to_string(),
-                        fields,
-                        tick: self.tick,
-                    };
-                    self.game_events.push(ge);
-                    self.game_events_counter.insert("item_sold".to_string());
-                }
+                fields.push(EventField {
+                    data: self.get_prop_from_ent(&(ITEM_PURCHASE_COST + inventory_slot), entid).ok(),
+                    name: "cost".to_string(),
+                });
+                fields.push(EventField {
+                    data: Some(Variant::U32(inventory_slot)),
+                    name: "inventory_slot".to_string(),
+                });
+                fields.extend(self.find_extra_props_events(*entid, "user"));
+                fields.extend(self.find_non_player_props());
+                let ge = GameEvent {
+                    name: "item_sold".to_string(),
+                    fields,
+                    tick: self.tick,
+                };
+                self.game_events.push(ge);
+                self.game_events_counter.insert("item_sold".to_string());
             }
-            _ => {}
         });
     }
     fn combine_purchase_events(events: &[GameEventInfo]) -> Vec<PurchaseEvent> {
@@ -607,7 +569,7 @@ impl<'a> SecondPassParser<'a> {
                     Some(GameEventInfo::WeaponCreateNCost((Variant::I32(cost), _))),
                     Some(GameEventInfo::WeaponCreateHitem((Variant::U64(handle), _))),
                 ) => {
-                    match WEAPINDICIES.get(&(*def as u32)) {
+                    match WEAPINDICIES.get(&{ *def }) {
                         Some(name) => {
                             purchases.push(PurchaseEvent {
                                 cost: *cost,
@@ -634,7 +596,7 @@ impl<'a> SecondPassParser<'a> {
                     Some(GameEventInfo::WeaponCreateNCost((Variant::I32(cost), _))),
                     _,
                 ) => {
-                    match WEAPINDICIES.get(&(*def as u32)) {
+                    match WEAPINDICIES.get(&{ *def }) {
                         Some(name) => {
                             purchases.push(PurchaseEvent {
                                 cost: *cost,
@@ -788,7 +750,7 @@ impl<'a> SecondPassParser<'a> {
         if !self.wanted_events.contains(&"round_end".to_string()) && self.wanted_events.first() != Some(&"all".to_string()) {
             return Ok(());
         }
-        let event = match self.extract_round_end(&events) {
+        let event = match self.extract_round_end(events) {
             Some(event) => event,
             None => return Ok(()),
         };
@@ -803,11 +765,11 @@ impl<'a> SecondPassParser<'a> {
                 name: "round".to_string(),
             });
             fields.push(EventField {
-                data: SecondPassParser::extract_win_reason(&self, &events),
+                data: SecondPassParser::extract_win_reason(self, events),
                 name: "reason".to_string(),
             });
             fields.push(EventField {
-                data: SecondPassParser::extract_winner(&self, &events),
+                data: SecondPassParser::extract_winner(self, events),
                 name: "winner".to_string(),
             });
             fields.push(EventField {
@@ -883,10 +845,7 @@ impl<'a> SecondPassParser<'a> {
     pub fn find_current_round(&self) -> Option<Variant> {
         if let Some(prop_id) = self.prop_controller.special_ids.total_rounds_played {
             match self.rules_entity_id {
-                Some(entid) => match self.get_prop_from_ent(&prop_id, &entid).ok() {
-                    Some(Variant::I32(val)) => return Some(Variant::I32(val + 1)),
-                    _ => {}
-                },
+                Some(entid) => if let Ok(Variant::I32(val)) = self.get_prop_from_ent(&prop_id, &entid) { return Some(Variant::I32(val + 1)) },
                 None => return None,
             }
         }
@@ -1106,7 +1065,7 @@ fn parse_key(key: &KeyT) -> Option<Variant> {
         8 => Some(Variant::I32(key.val_long().try_into().unwrap_or(-1))),
         9 => Some(Variant::I32(key.val_short().try_into().unwrap_or(-1))),
         _ => {
-            return None;
+            None
         }
     }
 }

@@ -95,7 +95,7 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
 
                 // Create behavioral vector
                 out.push(BehavioralVector {
-                    tick: cur_tick as u32,
+                    tick: cur_tick,
                     steamid: c.steamid,
                     health: c
                         .props
@@ -149,7 +149,7 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .unwrap_or(0.0),
                     weapon_id: weap_id,
                     ammo: c.ammo_clip.unwrap_or(0) as f32,
-                    is_airborne: if c.props.get("m_hGroundEntity").map_or(true, |v| v == "-1") {
+                    is_airborne: if c.props.get("m_hGroundEntity").is_none_or(|v| v == "-1") {
                         1.0
                     } else {
                         0.0
@@ -376,8 +376,8 @@ mod tests {
         for (i, row_result) in row_iter.enumerate() {
             let row = row_result.unwrap();
             // Use correct type accessors for UInt32 fields
-            assert_eq!(row.get_uint(0).unwrap() as u32, vectors[i].tick);
-            assert_eq!(row.get_ulong(1).unwrap() as u64, vectors[i].steamid);
+            assert_eq!(row.get_uint(0).unwrap(), vectors[i].tick);
+            assert_eq!(row.get_ulong(1).unwrap(), vectors[i].steamid);
             assert_eq!(row.get_float(2).unwrap(), vectors[i].health);
             assert_eq!(row.get_float(3).unwrap(), vectors[i].armor);
             assert_eq!(row.get_float(4).unwrap(), vectors[i].pos_x);
@@ -390,7 +390,7 @@ mod tests {
             assert_eq!(row.get_float(11).unwrap(), vectors[i].pitch);
             // Use correct type accessor for UInt32 weapon_id field
             assert_eq!(
-                row.get_uint(12).unwrap() as u32,
+                row.get_uint(12).unwrap(),
                 vectors[i].weapon_id as u32
             );
             assert_eq!(row.get_float(13).unwrap(), vectors[i].ammo);

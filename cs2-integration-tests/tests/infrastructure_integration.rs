@@ -1,8 +1,5 @@
-use anyhow::Result;
 #[cfg(feature = "integration-tests")]
 use cs2_integration_tests::{TestDataFactory, TestInfrastructure};
-use std::time::Duration;
-use tokio::time::timeout;
 
 #[cfg(feature = "integration-tests")]
 #[tokio::test]

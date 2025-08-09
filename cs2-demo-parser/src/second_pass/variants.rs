@@ -86,6 +86,12 @@ pub struct PropColumn {
     pub num_nones: usize,
 }
 
+impl Default for PropColumn {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PropColumn {
     pub fn new() -> Self {
         PropColumn { data: None, num_nones: 0 }
@@ -139,7 +145,7 @@ impl PropColumn {
         match &mut self.data {
             Some(VarVec::Bool(v)) => match &other.data {
                 Some(VarVec::Bool(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -150,7 +156,7 @@ impl PropColumn {
             },
             Some(VarVec::I32(v)) => match &other.data {
                 Some(VarVec::I32(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -161,7 +167,7 @@ impl PropColumn {
             },
             Some(VarVec::F32(v)) => match &other.data {
                 Some(VarVec::F32(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -172,7 +178,7 @@ impl PropColumn {
             },
             Some(VarVec::String(v)) => match &other.data {
                 Some(VarVec::String(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -183,7 +189,7 @@ impl PropColumn {
             },
             Some(VarVec::U32(v)) => match &other.data {
                 Some(VarVec::U32(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -194,7 +200,7 @@ impl PropColumn {
             },
             Some(VarVec::U64(v)) => match &other.data {
                 Some(VarVec::U64(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -205,7 +211,7 @@ impl PropColumn {
             },
             Some(VarVec::StringVec(v)) => match &other.data {
                 Some(VarVec::StringVec(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -216,7 +222,7 @@ impl PropColumn {
             },
             Some(VarVec::U64Vec(v)) => match &other.data {
                 Some(VarVec::U64Vec(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -227,7 +233,7 @@ impl PropColumn {
             },
             Some(VarVec::XYVec(v)) => match &other.data {
                 Some(VarVec::XYVec(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -238,7 +244,7 @@ impl PropColumn {
             },
             Some(VarVec::XYZVec(v)) => match &other.data {
                 Some(VarVec::XYZVec(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -249,7 +255,7 @@ impl PropColumn {
             },
             Some(VarVec::Stickers(v)) => match &other.data {
                 Some(VarVec::Stickers(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -260,7 +266,7 @@ impl PropColumn {
             },
             Some(VarVec::InputHistory(v)) => match &other.data {
                 Some(VarVec::InputHistory(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -271,7 +277,7 @@ impl PropColumn {
             },
             Some(VarVec::U32Vec(v)) => match &other.data {
                 Some(VarVec::U32Vec(v_other)) => {
-                    v.extend_from_slice(&v_other);
+                    v.extend_from_slice(v_other);
                 }
                 None => {
                     for _ in 0..other.num_nones {
@@ -390,7 +396,7 @@ impl PropColumn {
             None => match &item {
                 None => self.num_nones += 1,
                 Some(p) => {
-                    let mut var_vec = VarVec::new(&p);
+                    let mut var_vec = VarVec::new(p);
                     for _ in 0..self.num_nones {
                         var_vec.push_variant(None);
                     }
@@ -409,58 +415,19 @@ impl VarVec {
     #[inline(always)]
     pub fn push_variant(&mut self, item: Option<Variant>) {
         match item {
-            Some(Variant::F32(p)) => match self {
-                VarVec::F32(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::I32(p)) => match self {
-                VarVec::I32(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::String(p)) => match self {
-                VarVec::String(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::U32(p)) => match self {
-                VarVec::U32(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::U64(p)) => match self {
-                VarVec::U64(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::Bool(p)) => match self {
-                VarVec::Bool(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::StringVec(p)) => match self {
-                VarVec::StringVec(f) => f.push(p),
-                _ => {}
-            },
-            Some(Variant::U64Vec(p)) => match self {
-                VarVec::U64Vec(f) => f.push(p),
-                _ => {}
-            },
-            Some(Variant::U32Vec(p)) => match self {
-                VarVec::U32Vec(f) => f.push(p),
-                _ => {}
-            },
-            Some(Variant::VecXY(p)) => match self {
-                VarVec::XYVec(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::VecXYZ(p)) => match self {
-                VarVec::XYZVec(f) => f.push(Some(p)),
-                _ => {}
-            },
-            Some(Variant::Stickers(p)) => match self {
-                VarVec::Stickers(f) => f.push(p),
-                _ => {}
-            },
-            Some(Variant::InputHistory(p)) => match self {
-                VarVec::InputHistory(f) => f.push(p),
-                _ => {}
-            },
+            Some(Variant::F32(p)) => if let VarVec::F32(f) = self { f.push(Some(p)) },
+            Some(Variant::I32(p)) => if let VarVec::I32(f) = self { f.push(Some(p)) },
+            Some(Variant::String(p)) => if let VarVec::String(f) = self { f.push(Some(p)) },
+            Some(Variant::U32(p)) => if let VarVec::U32(f) = self { f.push(Some(p)) },
+            Some(Variant::U64(p)) => if let VarVec::U64(f) = self { f.push(Some(p)) },
+            Some(Variant::Bool(p)) => if let VarVec::Bool(f) = self { f.push(Some(p)) },
+            Some(Variant::StringVec(p)) => if let VarVec::StringVec(f) = self { f.push(p) },
+            Some(Variant::U64Vec(p)) => if let VarVec::U64Vec(f) = self { f.push(p) },
+            Some(Variant::U32Vec(p)) => if let VarVec::U32Vec(f) = self { f.push(p) },
+            Some(Variant::VecXY(p)) => if let VarVec::XYVec(f) = self { f.push(Some(p)) },
+            Some(Variant::VecXYZ(p)) => if let VarVec::XYZVec(f) = self { f.push(Some(p)) },
+            Some(Variant::Stickers(p)) => if let VarVec::Stickers(f) = self { f.push(p) },
+            Some(Variant::InputHistory(p)) => if let VarVec::InputHistory(f) = self { f.push(p) },
             None => self.push_none(),
             _ => {}
         }
@@ -560,10 +527,7 @@ impl Serialize for PlayerEndMetaData {
     {
         let mut state = serializer.serialize_struct("PlayerEndMetaData", 3)?;
         state.serialize_field("name", &self.name)?;
-        let steamid = match self.steamid {
-            Some(u) => Some(u.to_string()),
-            None => None,
-        };
+        let steamid = self.steamid.map(|u| u.to_string());
         state.serialize_field("steamid", &steamid)?;
         state.serialize_field("team_number", &self.team_number)?;
         state.end()
@@ -575,10 +539,7 @@ impl Serialize for EconItem {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("EconItem", 14)?;
-        let steamid = match self.steamid {
-            Some(u) => Some(u.to_string()),
-            None => None,
-        };
+        let steamid = self.steamid.map(|u| u.to_string());
         state.serialize_field("steamid", &steamid)?;
         state.serialize_field("account_id", &self.account_id)?;
         state.serialize_field("custom_name", &self.custom_name)?;
@@ -604,10 +565,7 @@ impl Serialize for ProjectileRecord {
         S: serde::Serializer,
     {
         let mut state = serializer.serialize_struct("ProjectileRecord", 7)?;
-        let steamid = match self.steamid {
-            Some(u) => Some(u.to_string()),
-            None => None,
-        };
+        let steamid = self.steamid.map(|u| u.to_string());
         state.serialize_field("steamid", &steamid)?;
         state.serialize_field("grenade_type", &self.grenade_type)?;
         state.serialize_field("name", &self.name)?;
@@ -654,7 +612,7 @@ pub struct OutputSerdeHelperStruct {
 }
 pub fn soa_to_aos(soa: OutputSerdeHelperStruct) -> Vec<std::collections::HashMap<String, Option<Variant>>> {
     let mut total_rows = 0;
-    for (_, v) in &soa.inner {
+    for v in soa.inner.values() {
         total_rows = v.len();
     }
     let mut v = Vec::with_capacity(total_rows);
@@ -701,11 +659,11 @@ pub fn soa_to_aos(soa: OutputSerdeHelperStruct) -> Vec<std::collections::HashMap
                         _ => hm.insert(prop_info.prop_friendly_name.clone(), None),
                     },
                     Some(VarVec::XYVec(val)) => match val.get(idx) {
-                        Some(Some(f)) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::VecXY(f.clone()))),
+                        Some(Some(f)) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::VecXY(*f))),
                         _ => hm.insert(prop_info.prop_friendly_name.clone(), None),
                     },
                     Some(VarVec::XYZVec(val)) => match val.get(idx) {
-                        Some(Some(f)) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::VecXYZ(f.clone()))),
+                        Some(Some(f)) => hm.insert(prop_info.prop_friendly_name.clone(), Some(Variant::VecXYZ(*f))),
                         _ => hm.insert(prop_info.prop_friendly_name.clone(), None),
                     },
                     Some(VarVec::Stickers(val)) => match val.get(idx) {
@@ -747,10 +705,7 @@ impl Serialize for OutputSerdeHelperStruct {
                     Some(VarVec::U64(val)) => {
                         let as_str: Vec<Option<String>> = val
                             .iter()
-                            .map(|x| match x {
-                                Some(u) => Some(u.to_string()),
-                                None => None,
-                            })
+                            .map(|x| x.as_ref().map(|u| u.to_string()))
                             .collect_vec();
                         map.serialize_entry(&prop_info.prop_friendly_name, &as_str)?;
                     }

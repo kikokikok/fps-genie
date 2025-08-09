@@ -157,7 +157,7 @@ impl<'a> FirstPassParser<'a> {
         demo_cmd == EDemoCommands::DemPacket || demo_cmd == EDemoCommands::DemAnimationData
     }
     fn slice_packet_bytes(&mut self, demo_bytes: &'a [u8], frame_size: usize) -> Result<&'a [u8], DemoParserError> {
-        if self.ptr + frame_size as usize >= demo_bytes.len() {
+        if self.ptr + frame_size >= demo_bytes.len() {
             return Err(DemoParserError::MalformedMessage);
         }
         Ok(&demo_bytes[self.ptr..self.ptr + frame_size])
@@ -168,7 +168,7 @@ impl<'a> FirstPassParser<'a> {
                 FirstPassParser::resize_if_needed(buf, decompress_len(possibly_uncompressed_bytes))?;
                 match SnapDecoder::new().decompress(possibly_uncompressed_bytes, buf) {
                     Ok(idx) => Ok(&buf[..idx]),
-                    Err(e) => return Err(DemoParserError::DecompressionFailure(format!("{}", e))),
+                    Err(e) => Err(DemoParserError::DecompressionFailure(format!("{}", e))),
                 }
             }
             false => Ok(possibly_uncompressed_bytes),
@@ -208,10 +208,10 @@ impl<'a> FirstPassParser<'a> {
             order_by_steamid: self.order_by_steamid,
             header: self.header.clone(),
             fullpacket_offsets: self.fullpacket_offsets.clone(),
-            settings: &self.settings,
+            settings: self.settings,
             baselines: self.baselines.clone(),
             prop_controller: &self.prop_controller,
-            cls_by_id: &cls_by_id,
+            cls_by_id,
             qfmap: &self.qf_mapper,
             ge_list: &self.ge_list,
             // arc?
@@ -262,7 +262,7 @@ impl<'a> FirstPassParser<'a> {
                 }
                 if item.table_name() == "userinfo" {
                     for i in &item.items {
-                        if let Ok(player) = parse_userinfo(&i.data()) {
+                        if let Ok(player) = parse_userinfo(i.data()) {
                             if player.steamid != 0 {
                                 self.stringtable_players.insert(player.userid, player);
                             }
@@ -331,18 +331,15 @@ impl<'a> FirstPassParser<'a> {
         if bytes.len() < 16 {
             return Err(DemoParserError::OutOfBytesError);
         }
-        match std::str::from_utf8(&bytes[..8]) {
-            Ok(magic) => match magic {
-                "PBDEMS2\0" => {}
-                "HL2DEMO\0" => {
-                    return Err(DemoParserError::Source1DemoError);
-                }
-                _ => {
-                    return Err(DemoParserError::UnknownFile);
-                }
-            },
-            Err(_) => {}
-        };
+        if let Ok(magic) = std::str::from_utf8(&bytes[..8]) { match magic {
+            "PBDEMS2\0" => {}
+            "HL2DEMO\0" => {
+                return Err(DemoParserError::Source1DemoError);
+            }
+            _ => {
+                return Err(DemoParserError::UnknownFile);
+            }
+        } };
         // hmmmm not sure where the 18 comes from if the header is only 16?
         // can be used to check that file ends early
         let file_length_expected = match bytes[8..12].try_into() {
@@ -399,6 +396,6 @@ impl<'a> FirstPassParser<'a> {
         self.cls_by_id = Some(Arc::new(cls_by_id));
         self.qf_mapper = qf_mapper;
         self.prop_controller = p;
-        return Ok(());
+        Ok(())
     }
 }

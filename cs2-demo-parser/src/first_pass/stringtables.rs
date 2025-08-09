@@ -110,13 +110,11 @@ impl<'a> FirstPassParser<'a> {
 
                         if position >= keys.len() as u32 {
                             key = key.to_owned() + &bitreader.read_string()?;
-                        } else {
-                            if let Some(s) = &keys.get(position as usize) {
-                                if length > s.len() as u32 {
-                                    key = key.to_owned() + &s + &bitreader.read_string()?;
-                                } else {
-                                    key = key.to_owned() + &s.get(0..length as usize).unwrap_or("") + &bitreader.read_string()?;
-                                }
+                        } else if let Some(s) = &keys.get(position as usize) {
+                            if length > s.len() as u32 {
+                                key = key.to_owned() + s + &bitreader.read_string()?;
+                            } else {
+                                key = key.to_owned() + s.get(0..length as usize).unwrap_or("") + &bitreader.read_string()?;
                             }
                         }
                     }
@@ -270,9 +268,9 @@ impl<'a> SecondPassParser<'a> {
                         } else {
                             let s = &keys[position as usize];
                             if length > s.len() as u32 {
-                                key = key.to_owned() + &s + &bitreader.read_string()?;
+                                key = key.to_owned() + s + &bitreader.read_string()?;
                             } else {
-                                key = key.to_owned() + &s.get(0..length as usize).unwrap_or("") + &bitreader.read_string()?;
+                                key = key.to_owned() + s.get(0..length as usize).unwrap_or("") + &bitreader.read_string()?;
                             }
                         }
                     }

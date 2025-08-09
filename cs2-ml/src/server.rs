@@ -99,7 +99,7 @@ mod tests {
     };
     use std::thread;
     use std::time::Duration;
-    use tempfile::NamedTempFile;
+    
 
     struct TestServer {
         port: u16,

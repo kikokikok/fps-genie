@@ -283,10 +283,8 @@ mod database_integration_tests {
 
         // 6. Verify the workflow by querying data
         let completed_matches = db.postgres.get_unprocessed_matches().await?;
-        let workflow_match_completed = completed_matches
-            .iter()
-            .find(|m| m.match_id == test_match.match_id)
-            .is_none(); // Should not be in unprocessed list
+        let workflow_match_completed = !completed_matches
+            .iter().any(|m| m.match_id == test_match.match_id); // Should not be in unprocessed list
         assert!(
             workflow_match_completed,
             "Match should be marked as completed"

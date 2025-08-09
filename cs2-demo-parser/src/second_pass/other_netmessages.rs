@@ -23,14 +23,8 @@ impl<'a> SecondPassParser<'a> {
             Err(_) => return Err(DemoParserError::MalformedMessage),
         };
         for item in &drops.entity_updates {
-            let item_name = match WEAPINDICIES.get(&item.defindex.unwrap_or(u32::MAX)) {
-                Some(name) => Some(name.to_string()),
-                None => None,
-            };
-            let skin_name = match PAINTKITS.get(&item.paintindex.unwrap_or(u32::MAX)) {
-                Some(name) => Some(name.to_string()),
-                None => None,
-            };
+            let item_name = WEAPINDICIES.get(&item.defindex.unwrap_or(u32::MAX)).map(|name| name.to_string());
+            let skin_name = PAINTKITS.get(&item.paintindex.unwrap_or(u32::MAX)).map(|name| name.to_string());
             self.item_drops.push(EconItem {
                 account_id: item.accountid,
                 item_id: item.itemid,
@@ -83,14 +77,8 @@ impl<'a> SecondPassParser<'a> {
             });
             for item in &player.items {
                 if item.itemid() != 0 {
-                    let item_name = match WEAPINDICIES.get(&item.defindex.unwrap_or(u32::MAX)) {
-                        Some(name) => Some(name.to_string()),
-                        None => None,
-                    };
-                    let skin_name = match PAINTKITS.get(&item.paintindex.unwrap_or(u32::MAX)) {
-                        Some(name) => Some(name.to_string()),
-                        None => None,
-                    };
+                    let item_name = WEAPINDICIES.get(&item.defindex.unwrap_or(u32::MAX)).map(|name| name.to_string());
+                    let skin_name = PAINTKITS.get(&item.paintindex.unwrap_or(u32::MAX)).map(|name| name.to_string());
                     self.skins.push(EconItem {
                         account_id: item.accountid,
                         item_id: item.itemid,

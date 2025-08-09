@@ -54,19 +54,19 @@ pub enum ParsingMode {
 impl<'a> Parser<'a> {
     pub fn new(input: ParserInputs<'a>, parsing_mode: ParsingMode) -> Self {
         Parser {
-            input: input,
-            parsing_mode: parsing_mode,
+            input,
+            parsing_mode,
         }
     }
     pub fn parse_demo(&mut self, demo_bytes: &[u8]) -> Result<DemoOutput, DemoParserError> {
         let mut first_pass_parser = FirstPassParser::new(&self.input);
-        let first_pass_output = first_pass_parser.parse_demo(&demo_bytes, false)?;
+        let first_pass_output = first_pass_parser.parse_demo(demo_bytes, false)?;
         if self.parsing_mode == ParsingMode::Normal
             && check_multithreadability(&self.input.wanted_player_props)
             && !(self.parsing_mode == ParsingMode::ForceSingleThreaded)
             || self.parsing_mode == ParsingMode::ForceMultiThreaded
         {
-            return self.second_pass_multi_threaded(demo_bytes, first_pass_output);
+            self.second_pass_multi_threaded(demo_bytes, first_pass_output)
         } else {
             self.second_pass_single_threaded(demo_bytes, first_pass_output)
         }
@@ -163,7 +163,7 @@ impl<'a> Parser<'a> {
             }
             Parser::add_item_purchase_sell_column(&mut outputs.game_events);
             Parser::remove_item_sold_events(&mut outputs.game_events);
-            return Ok(outputs);
+            Ok(outputs)
         })
     }
     fn second_pass_multi_threaded_no_channels(&self, outer_bytes: &[u8], first_pass_output: FirstPassOutput) -> Result<DemoOutput, DemoParserError> {
@@ -275,7 +275,7 @@ impl<'a> Parser<'a> {
         let mut prop_controller = first_pass_output.prop_controller.clone();
         for prop in first_pass_output.added_temp_props {
             prop_controller.wanted_player_props.retain(|x| x != &prop);
-            prop_controller.prop_infos.retain(|x| &x.prop_name != &prop);
+            prop_controller.prop_infos.retain(|x| x.prop_name != prop);
         }
         let per_players: Vec<AHashMap<u64, AHashMap<u32, PropColumn>>> = second_pass_outputs.iter().map(|x| x.df_per_player.clone()).collect();
         let mut all_steamids = AHashSet::default();
@@ -288,7 +288,7 @@ impl<'a> Parser<'a> {
         for steamid in all_steamids {
             let mut v = vec![];
             for output in &per_players {
-                if let Some(df) = output.get(&steamid) {
+                if let Some(df) = output.get(steamid) {
                     v.push(df.clone());
                 }
             }
@@ -297,7 +297,7 @@ impl<'a> Parser<'a> {
         }
 
         DemoOutput {
-            prop_controller: prop_controller,
+            prop_controller,
             chat_messages: second_pass_outputs.iter().flat_map(|x| x.chat_messages.clone()).collect(),
             item_drops: second_pass_outputs.iter().flat_map(|x| x.item_drops.clone()).collect(),
             player_md: second_pass_outputs.iter().flat_map(|x| x.player_md.clone()).collect(),
@@ -327,11 +327,10 @@ impl<'a> Parser<'a> {
 
         for part_df in v {
             for (k, v) in part_df {
-                if remove_name_and_steamid {
-                    if k == &STEAMID_ID || k == &NAME_ID {
+                if remove_name_and_steamid
+                    && (k == &STEAMID_ID || k == &NAME_ID) {
                         continue;
                     }
-                }
 
                 if big.contains_key(k) {
                     if let Some(inner) = big.get_mut(k) {
@@ -358,8 +357,8 @@ impl SellBackHelper {
             if let Some(Variant::U64(steamid)) = SellBackHelper::extract_field("steamid", &event.fields) {
                 if let Some(Variant::U32(slot)) = SellBackHelper::extract_field("inventory_slot", &event.fields) {
                     return Some(SellBackHelper {
-                        tick: tick,
-                        steamid: steamid,
+                        tick,
+                        steamid,
                         inventory_slot: slot,
                     });
                 }

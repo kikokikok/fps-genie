@@ -84,6 +84,12 @@ pub struct Teams {
     pub team2_entid: Option<i32>,
     pub team3_entid: Option<i32>,
 }
+impl Default for Teams {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Teams {
     pub fn new() -> Self {
         Teams {
@@ -168,7 +174,7 @@ impl<'a> SecondPassParser<'a> {
             uniq_prop_names: AHashSet::default(),
             parse_usercmd: contains_usercmd_prop(&first_pass_output.settings.wanted_player_props),
             last_tick: 0,
-            start_end_offset: start_end_offset,
+            start_end_offset,
             order_by_steamid: first_pass_output.order_by_steamid,
             df_per_player: AHashMap::default(),
             voice_data: vec![],
@@ -185,16 +191,16 @@ impl<'a> SecondPassParser<'a> {
             stringtable_players: first_pass_output.stringtable_players,
             is_debug_mode: debug,
             projectile_records: vec![],
-            parse_all_packets: parse_all_packets,
+            parse_all_packets,
             wanted_players: first_pass_output.wanted_players.clone(),
             wanted_ticks: first_pass_output.wanted_ticks.clone(),
-            prop_controller: &first_pass_output.prop_controller,
-            qf_mapper: &first_pass_output.qfmap,
+            prop_controller: first_pass_output.prop_controller,
+            qf_mapper: first_pass_output.qfmap,
             fullpackets_parsed: 0,
             serializers: AHashMap::default(),
             ptr: offset,
             ge_list: first_pass_output.ge_list,
-            cls_by_id: &first_pass_output.cls_by_id,
+            cls_by_id: first_pass_output.cls_by_id,
             entities: vec![None; DEFAULT_MAX_ENTITY_ID],
             cls_bits: None,
             tick: -99999,
@@ -216,7 +222,7 @@ impl<'a> SecondPassParser<'a> {
             item_drops: vec![],
             skins: vec![],
             player_end_data: vec![],
-            huffman_lookup_table: &first_pass_output.settings.huffman_lookup_table,
+            huffman_lookup_table: first_pass_output.settings.huffman_lookup_table,
             header: HashMap::default(),
             list_props: first_pass_output.list_props,
         })
@@ -283,6 +289,12 @@ pub struct SpecialIDs {
     pub is_airborn: Option<u32>,
     pub initial_velocity: Option<u32>,
 }
+impl Default for SpecialIDs {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SpecialIDs {
     pub fn new() -> Self {
         SpecialIDs {
@@ -341,7 +353,7 @@ pub fn create_huffman_lookup_table() -> Vec<(u8, u8)> {
     for chunk in buf.chunks_exact(2) {
         huf2.push((chunk[0], chunk[1]));
     }
-    return huf2;
+    huf2
 }
 
 fn contains_usercmd_prop(names: &[String]) -> bool {

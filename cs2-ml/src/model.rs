@@ -63,8 +63,8 @@ impl BehaviorNet {
             input.vel_x,
             input.vel_y,
             input.vel_z,
-            input.health as f32,
-            input.armor as f32,
+            input.health,
+            input.armor,
             input.yaw,
             input.pitch,
             if input.is_airborne > 0.5 { 1.0 } else { 0.0 },
@@ -73,7 +73,7 @@ impl BehaviorNet {
 
         match self.forward_vec(&input_vec) {
             Ok(output) => cs2_common::OutputVector {
-                delta_yaw: output.get(0).copied().unwrap_or(0.0),
+                delta_yaw: output.first().copied().unwrap_or(0.0),
                 delta_pitch: output.get(1).copied().unwrap_or(0.0),
             },
             Err(_) => cs2_common::OutputVector {
@@ -99,7 +99,7 @@ impl BehaviorNet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::tempdir;
+    
 
     #[test]
     fn test_forward_shape() {

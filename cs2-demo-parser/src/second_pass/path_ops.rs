@@ -73,7 +73,7 @@ impl FieldPath {
     pub fn get_entry_mut(&mut self, idx: usize) -> Result<&mut i32, DemoParserError> {
         match self.path.get_mut(idx) {
             Some(entry) => Ok(entry),
-            None => return Err(DemoParserError::IllegalPathOp),
+            None => Err(DemoParserError::IllegalPathOp),
         }
     }
 }

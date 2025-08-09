@@ -67,7 +67,7 @@ impl<'a> SecondPassParser<'a> {
             }
             let frame = self.read_frame(demo_bytes)?;
             if frame.demo_cmd == DemAnimationData || frame.demo_cmd == DemSendTables || frame.demo_cmd == DemStringTables {
-                self.ptr += frame.size as usize;
+                self.ptr += frame.size;
                 continue;
             }
             let bytes = match self.slice_packet_bytes(demo_bytes, frame.size) {
@@ -81,12 +81,12 @@ impl<'a> SecondPassParser<'a> {
             self.ptr += frame.size;
 
             let ok = match frame.demo_cmd {
-                DemSignonPacket => self.parse_packet(&bytes, &mut buf2),
-                DemPacket => self.parse_packet(&bytes, &mut buf2),
+                DemSignonPacket => self.parse_packet(bytes, &mut buf2),
+                DemPacket => self.parse_packet(bytes, &mut buf2),
                 DemStop => break,
                 DemUserCmd => Ok(()),
                 DemFullPacket => {
-                    if self.parse_full_packet_and_break_if_needed(&bytes, &mut buf2, started_at)? {
+                    if self.parse_full_packet_and_break_if_needed(bytes, &mut buf2, started_at)? {
                         break;
                     }
                     Ok(())
@@ -102,24 +102,24 @@ impl<'a> SecondPassParser<'a> {
             if self.ptr > start_end_offset.end {
                 return Ok(true);
             } else {
-                self.parse_full_packet(&bytes, true, buf)?;
+                self.parse_full_packet(bytes, true, buf)?;
                 return Ok(false);
             }
         }
         match self.parse_all_packets {
             true => {
-                self.parse_full_packet(&bytes, false, buf)?;
+                self.parse_full_packet(bytes, false, buf)?;
             }
             false => {
                 if self.fullpackets_parsed == 0 && started_at != HEADER_ENDS_AT_BYTE {
-                    self.parse_full_packet(&bytes, true, buf)?;
+                    self.parse_full_packet(bytes, true, buf)?;
                     self.fullpackets_parsed += 1;
                 } else {
                     return Ok(true);
                 }
             }
         }
-        return Ok(false);
+        Ok(false)
     }
     fn read_frame(&mut self, demo_bytes: &[u8]) -> Result<Frame, DemoParserError> {
         let frame_starts_at = self.ptr;
@@ -141,7 +141,7 @@ impl<'a> SecondPassParser<'a> {
         })
     }
     fn slice_packet_bytes(&mut self, demo_bytes: &'a [u8], frame_size: usize) -> Result<&'a [u8], DemoParserError> {
-        if self.ptr + frame_size as usize >= demo_bytes.len() {
+        if self.ptr + frame_size >= demo_bytes.len() {
             return Err(DemoParserError::MalformedMessage);
         }
         Ok(&demo_bytes[self.ptr..self.ptr + frame_size])
@@ -152,7 +152,7 @@ impl<'a> SecondPassParser<'a> {
                 FirstPassParser::resize_if_needed(buf, decompress_len(possibly_uncompressed_bytes))?;
                 match SnapDecoder::new().decompress(possibly_uncompressed_bytes, buf) {
                     Ok(idx) => Ok(&buf[..idx]),
-                    Err(e) => return Err(DemoParserError::DecompressionFailure(format!("{}", e))),
+                    Err(e) => Err(DemoParserError::DecompressionFailure(format!("{}", e))),
                 }
             }
             false => Ok(possibly_uncompressed_bytes),
@@ -200,7 +200,7 @@ impl<'a> SecondPassParser<'a> {
             let ok = match NetMessageType::from(msg_type as i32) {
                 svc_PacketEntities => {
                     if should_parse_entities {
-                        self.parse_packet_ents(&msg_bytes, is_fullpacket)?;
+                        self.parse_packet_ents(msg_bytes, is_fullpacket)?;
                         if !is_fullpacket {
                             self.collect_entities();
                         }
@@ -302,7 +302,7 @@ impl<'a> SecondPassParser<'a> {
                 Ok(())
             }
             Ok(None) => Ok(()),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 
@@ -341,7 +341,7 @@ impl<'a> SecondPassParser<'a> {
                 }
                 if item.table_name == Some("userinfo".to_string()) {
                     for i in &item.items {
-                        if let Ok(player) = parse_userinfo(&i.data()) {
+                        if let Ok(player) = parse_userinfo(i.data()) {
                             if player.steamid != 0 {
                                 self.stringtable_players.insert(player.userid, player);
                             }
