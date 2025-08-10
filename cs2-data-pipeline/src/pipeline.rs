@@ -374,7 +374,7 @@ impl DemoProcessor {
 
         for demo_path in demo_files {
             // Check if already registered
-            if let Err(_) = self.register_demo(&demo_path).await {
+            if (self.register_demo(&demo_path).await).is_err() {
                 // Already exists or error - skip
                 continue;
             }

@@ -147,7 +147,7 @@ mod tests {
 
     // Modified serve function that checks shutdown flag
     fn serve_with_model_with_shutdown(
-        net: crate::model::BehaviorNet,
+        _net: crate::model::BehaviorNet,
         port: u16,
         shutdown: Arc<AtomicBool>,
     ) -> Result<()> {
@@ -162,7 +162,7 @@ mod tests {
                     let mut buf = [0u8; std::mem::size_of::<InputVector>()];
                     match stream.read_exact(&mut buf) {
                         Ok(_) => {
-                            let input_vec: &InputVector = bytemuck::from_bytes(&buf);
+                            let _input_vec: &InputVector = bytemuck::from_bytes(&buf);
                             // Temporarily use placeholder prediction
                             let output = cs2_common::OutputVector {
                                 delta_yaw: 0.0,
