@@ -136,7 +136,7 @@ jobs:
           if find . -name "*.ipynb" -type f | head -1; then
             echo "Found Jupyter notebooks, validating..."
             source venv/bin/activate
-          
+            
             # Test notebook execution with nbconvert
             for notebook in $(find . -name "*.ipynb" -type f); do
               echo "Validating notebook: $notebook"
