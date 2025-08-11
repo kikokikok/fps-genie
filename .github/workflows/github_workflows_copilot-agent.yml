@@ -1,0 +1,41 @@
+name: Copilot Coding Agent
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  copilot-agent:
+    runs-on: ubuntu-latest
+    env:
+      # Ensure any git operation done by the agent or tooling skips LFS blobs
+      GIT_LFS_SKIP_SMUDGE: "1"
+    steps:
+      - name: Checkout (no LFS)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: false
+
+      - name: Disable LFS smudge globally (safety)
+        run: |
+          git lfs install --skip-smudge
+          git config --global filter.lfs.smudge "git-lfs smudge --skip -- %f"
+          git config --global filter.lfs.process "git-lfs filter-process --skip"
+
+      - name: Clean workspace before agent
+        run: |
+          git reset --hard
+          git clean -fdx
+
+      - name: Run Copilot Coding Agent
+        # If your workflow uses a different action ref, I’ll adjust to match your current one
+        uses: github/copilot-coding-agent@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Propagate skip to any nested clones the agent performs
+          GIT_LFS_SKIP_SMUDGE: "1"
