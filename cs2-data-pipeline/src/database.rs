@@ -66,28 +66,32 @@ impl PostgresManager {
             RETURNING id
             "#,
         )
-            .bind(m.id)
-            .bind(&m.match_id)
-            .bind(&m.tournament)
-            .bind(&m.map_name)
-            .bind(&m.team1)
-            .bind(&m.team2)
-            .bind(m.score_team1)
-            .bind(m.score_team2)
-            .bind(&m.demo_file_path)
-            .bind(m.demo_file_size)
-            .bind(m.tick_rate)
-            .bind(m.duration_seconds)
-            .bind(m.created_at)
-            .bind(m.processed_at)
-            .bind(status_to_str(&m.processing_status))
-            .fetch_one(&self.pool)
-            .await?;
+        .bind(m.id)
+        .bind(&m.match_id)
+        .bind(&m.tournament)
+        .bind(&m.map_name)
+        .bind(&m.team1)
+        .bind(&m.team2)
+        .bind(m.score_team1)
+        .bind(m.score_team2)
+        .bind(&m.demo_file_path)
+        .bind(m.demo_file_size)
+        .bind(m.tick_rate)
+        .bind(m.duration_seconds)
+        .bind(m.created_at)
+        .bind(m.processed_at)
+        .bind(status_to_str(&m.processing_status))
+        .fetch_one(&self.pool)
+        .await?;
         let id: Uuid = row.try_get("id")?;
         Ok(id)
     }
 
-    pub async fn update_match_status(&self, match_id: &str, status: ProcessingStatus) -> Result<()> {
+    pub async fn update_match_status(
+        &self,
+        match_id: &str,
+        status: ProcessingStatus,
+    ) -> Result<()> {
         sqlx::query(
             "UPDATE matches SET processing_status = $1, processed_at = CASE WHEN $1='completed' THEN NOW() ELSE processed_at END WHERE match_id=$2",
         )
@@ -109,8 +113,8 @@ impl PostgresManager {
             ORDER BY created_at ASC
             "#,
         )
-            .fetch_all(&self.pool)
-            .await?;
+        .fetch_all(&self.pool)
+        .await?;
 
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
@@ -146,25 +150,22 @@ impl PostgresManager {
                 ON CONFLICT (id) DO NOTHING
                 "#,
             )
-                .bind(m.id)
-                .bind(m.match_id)
-                .bind(key_moment_type_to_str(&m.moment_type))
-                .bind(m.start_tick as i32)
-                .bind(m.end_tick as i32)
-                .bind(&m.players_involved)
-                .bind(&m.outcome)
-                .bind(m.importance_score)
-                .bind(m.created_at)
-                .execute(&self.pool)
-                .await?;
+            .bind(m.id)
+            .bind(m.match_id)
+            .bind(key_moment_type_to_str(&m.moment_type))
+            .bind(m.start_tick as i32)
+            .bind(m.end_tick as i32)
+            .bind(&m.players_involved)
+            .bind(&m.outcome)
+            .bind(m.importance_score)
+            .bind(m.created_at)
+            .execute(&self.pool)
+            .await?;
         }
         Ok(())
     }
 
-    pub async fn insert_moment_behaviors_batch(
-        &self,
-        behaviors: &[MomentBehavior],
-    ) -> Result<()> {
+    pub async fn insert_moment_behaviors_batch(&self, behaviors: &[MomentBehavior]) -> Result<()> {
         for b in behaviors {
             sqlx::query(
                 r#"
@@ -175,17 +176,17 @@ impl PostgresManager {
                 ON CONFLICT (id) DO NOTHING
                 "#,
             )
-                .bind(b.id)
-                .bind(b.match_id)
-                .bind(b.key_moment_id)
-                .bind(b.player_steamid)
-                .bind(b.start_tick)
-                .bind(b.end_tick)
-                .bind(b.features.clone())
-                .bind(b.series.clone())
-                .bind(b.created_at)
-                .execute(&self.pool)
-                .await?;
+            .bind(b.id)
+            .bind(b.match_id)
+            .bind(b.key_moment_id)
+            .bind(b.player_steamid)
+            .bind(b.start_tick)
+            .bind(b.end_tick)
+            .bind(b.features.clone())
+            .bind(b.series.clone())
+            .bind(b.created_at)
+            .execute(&self.pool)
+            .await?;
         }
         Ok(())
     }
@@ -213,7 +214,7 @@ impl TimescaleManager {
         sqlx::migrate!("../migrations").run(&self.pool).await?;
         Ok(())
     }
-    
+
     // Real insert so tests can read them back
     pub async fn insert_snapshots_batch(&self, snaps: &[PlayerSnapshot]) -> Result<()> {
         if snaps.is_empty() {
@@ -394,12 +395,12 @@ impl TimescaleManager {
             ORDER BY tick ASC
             "#,
         )
-            .bind(match_id)
-            .bind(steamid)
-            .bind(start_tick)
-            .bind(end_tick)
-            .fetch_all(&self.pool)
-            .await?;
+        .bind(match_id)
+        .bind(steamid)
+        .bind(start_tick)
+        .bind(end_tick)
+        .fetch_all(&self.pool)
+        .await?;
 
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
@@ -530,7 +531,10 @@ impl VectorManager {
         for (s, emb) in snaps.iter().zip(embeddings) {
             let id = format!("{}_{}_{}_{}", match_id, s.steamid, s.tick, round_number);
             let mut payload = serde_json::Map::<String, JsonValue>::new();
-            payload.insert("match_id".to_string(), JsonValue::String(match_id.to_string()));
+            payload.insert(
+                "match_id".to_string(),
+                JsonValue::String(match_id.to_string()),
+            );
             payload.insert("steamid".to_string(), JsonValue::from(s.steamid));
             payload.insert("tick".to_string(), JsonValue::from(s.tick));
             payload.insert("round_number".to_string(), JsonValue::from(round_number));
@@ -554,7 +558,10 @@ impl VectorManager {
         payload.insert("match_id".into(), JsonValue::String(emb.match_id.clone()));
         payload.insert("moment_id".into(), JsonValue::String(emb.moment_id.clone()));
         payload.insert("player_steamid".into(), JsonValue::from(emb.player_steamid));
-        payload.insert("moment_type".into(), JsonValue::String(emb.moment_type.clone()));
+        payload.insert(
+            "moment_type".into(),
+            JsonValue::String(emb.moment_type.clone()),
+        );
         payload.insert("metadata".into(), emb.metadata.clone());
 
         let point = PointStruct::new(emb.id.clone(), Vectors::from(emb.vector.clone()), payload);
@@ -587,11 +594,11 @@ impl VectorManager {
             .filter_map(|p| {
                 let id_str = match p.id {
                     Some(PointId {
-                             point_id_options: Some(PointIdOptions::Num(n)),
-                         }) => n.to_string(),
+                        point_id_options: Some(PointIdOptions::Num(n)),
+                    }) => n.to_string(),
                     Some(PointId {
-                             point_id_options: Some(PointIdOptions::Uuid(u)),
-                         }) => u,
+                        point_id_options: Some(PointIdOptions::Uuid(u)),
+                    }) => u,
                     _ => return None,
                 };
                 Some((id_str, p.score))
@@ -615,11 +622,11 @@ impl VectorManager {
             .filter_map(|p| {
                 let id_str = match p.id {
                     Some(PointId {
-                             point_id_options: Some(PointIdOptions::Num(n)),
-                         }) => n.to_string(),
+                        point_id_options: Some(PointIdOptions::Num(n)),
+                    }) => n.to_string(),
                     Some(PointId {
-                             point_id_options: Some(PointIdOptions::Uuid(u)),
-                         }) => u,
+                        point_id_options: Some(PointIdOptions::Uuid(u)),
+                    }) => u,
                     _ => return None,
                 };
                 Some((id_str, p.score))

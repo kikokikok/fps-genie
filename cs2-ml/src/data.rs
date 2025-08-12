@@ -1,6 +1,6 @@
 use anyhow::Result;
-use cs2_common::BehavioralVector;
 use cs2_common::parsing_features::{build_wanted, ParsingPreset};
+use cs2_common::BehavioralVector;
 use cs2_demo_parser::first_pass::parser_settings::ParserInputs;
 use cs2_demo_parser::parse_demo::{DemoOutput, Parser as DemoParser, ParsingMode};
 use cs2_demo_parser::second_pass::variants::PropColumn;
@@ -45,7 +45,9 @@ pub fn vectors_from_demo(path: impl AsRef<Path>) -> Result<Vec<BehavioralVector>
             order_by_steamid: false,
             list_props: false,
             fallback_bytes: None,
-        }, ParsingMode::Normal);
+        },
+        ParsingMode::Normal,
+    );
     // Use parse_demo with the bytes
     let parsed = parser.parse_demo(&bytes)?;
 
@@ -143,11 +145,7 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .unwrap_or(0.0),
                     weapon_id: weap_id,
                     ammo: c.ammo_clip.unwrap_or(0) as f32,
-                    is_airborne: if c
-                        .props
-                        .get("m_hGroundEntity")
-                        .is_none_or(|v| v == "-1")
-                    {
+                    is_airborne: if c.props.get("m_hGroundEntity").is_none_or(|v| v == "-1") {
                         1.0
                     } else {
                         0.0
@@ -157,8 +155,7 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .get("m_angEyeAngles[1]")
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(0.0)
-                        - c
-                            .props
+                        - c.props
                             .get("m_angEyeAngles[1]")
                             .and_then(|v| v.parse().ok())
                             .unwrap_or(0.0),
@@ -167,8 +164,7 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .get("m_angEyeAngles[0]")
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(0.0)
-                        - c
-                            .props
+                        - c.props
                             .get("m_angEyeAngles[0]")
                             .and_then(|v| v.parse().ok())
                             .unwrap_or(0.0),
@@ -269,11 +265,7 @@ pub fn write_to_parquet(vecs: &[BehavioralVector], path: impl AsRef<Path>) -> Re
     let batch = RecordBatch::try_new(Arc::new(schema.clone()), arrays)?;
 
     let props = WriterProperties::builder().build();
-    let mut writer = ArrowWriter::try_new(
-        file,
-        Arc::new(schema),
-        Some(props),
-    )?;
+    let mut writer = ArrowWriter::try_new(file, Arc::new(schema), Some(props))?;
 
     writer.write(&batch)?;
     writer.close()?;
