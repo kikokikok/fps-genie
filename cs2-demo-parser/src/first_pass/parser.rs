@@ -88,7 +88,7 @@ impl<'a> FirstPassParser<'a> {
         self.parse_header(bytes)?;
         Ok(self.header.clone())
     }
-    pub fn parse_demo(&mut self, demo_bytes: &'a [u8], exit_early: bool) -> Result<FirstPassOutput, DemoParserError> {
+    pub fn parse_demo(&mut self, demo_bytes: &'a [u8], exit_early: bool) -> Result<FirstPassOutput<'_>, DemoParserError> {
         self.handle_short_header(demo_bytes.len(), &demo_bytes[..HEADER_ENDS_AT_BYTE])?;
         let mut reuseable_buffer = vec![0_u8; 100_000];
         // Loop that goes trough the entire file
@@ -199,7 +199,7 @@ impl<'a> FirstPassParser<'a> {
         }
         Ok(())
     }
-    pub fn create_first_pass_output(&self) -> Result<FirstPassOutput, DemoParserError> {
+    pub fn create_first_pass_output(&self) -> Result<FirstPassOutput<'_>, DemoParserError> {
         let cls_by_id = match &self.cls_by_id {
             Some(c) => c,
             None => return Err(DemoParserError::ClassMapperNotFoundFirstPass),

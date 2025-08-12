@@ -59,7 +59,6 @@ pub struct MatchParticipation {
     pub rating: f32,
 }
 
-/// Time-series player snapshot for TimescaleDB
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerSnapshot {
     pub timestamp: DateTime<Utc>,
@@ -89,6 +88,19 @@ pub struct PlayerSnapshot {
     pub equipment_value: i32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MomentBehavior {
+    pub id: Uuid,
+    pub match_id: Uuid,
+    pub key_moment_id: Uuid,
+    pub player_steamid: i64,
+    pub start_tick: i32,
+    pub end_tick: i32,
+    pub features: serde_json::Value,
+    pub series: Option<serde_json::Value>,
+    pub created_at: DateTime<Utc>,
+}
+
 /// Key moment metadata for behavioral analysis
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct KeyMoment {
@@ -116,7 +128,7 @@ pub enum KeyMomentType {
     Flank,
 }
 
-/// Vector embeddings for similarity search
+// Behavioral vectors used by tests (Qdrant)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BehavioralEmbedding {
     pub id: String,
@@ -124,7 +136,7 @@ pub struct BehavioralEmbedding {
     pub moment_id: String,
     pub player_steamid: i64,
     pub moment_type: String,
-    pub vector: Vec<f32>, // High-dimensional behavioral representation
+    pub vector: Vec<f32>,
     pub metadata: serde_json::Value,
 }
 

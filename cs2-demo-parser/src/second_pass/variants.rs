@@ -480,8 +480,7 @@ impl VarVec {
                     f.push(p)
                 }
             }
-            None => self.push_none(),
-            _ => {}
+            None => self.push_none()
         }
     }
     pub fn push_none(&mut self) {

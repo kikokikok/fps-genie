@@ -1,5 +1,6 @@
 use anyhow::Result;
 use cs2_common::BehavioralVector;
+use cs2_common::parsing_features::{build_wanted, ParsingPreset};
 use cs2_demo_parser::first_pass::parser_settings::ParserInputs;
 use cs2_demo_parser::parse_demo::{DemoOutput, Parser as DemoParser, ParsingMode};
 use cs2_demo_parser::second_pass::variants::PropColumn;
@@ -22,36 +23,29 @@ pub fn vectors_from_demo(path: impl AsRef<Path>) -> Result<Vec<BehavioralVector>
     // Create a longer-lived empty vector for the huffman table
     let huffman_table = Vec::new();
 
+    // Build wanted lists from a Standard preset for ML use
+    let wanted = build_wanted(ParsingPreset::Standard.to_features());
+
     // Create parser with correct ParserInputs structure including all required fields
     let mut parser = DemoParser::new(
         ParserInputs {
             real_name_to_og_name: AHashMap::new(),
             wanted_players: Vec::new(),
-            wanted_player_props: vec![
-                "m_iHealth".to_string(),
-                "m_ArmorValue".to_string(),
-                "m_vecOrigin".to_string(),
-                "m_vecVelocity".to_string(),
-                "m_angEyeAngles".to_string(),
-                "m_hGroundEntity".to_string(),
-            ],
-            wanted_other_props: Vec::new(),
+            wanted_player_props: wanted.player_props,
+            wanted_other_props: wanted.other_props,
             wanted_prop_states: AHashMap::new(),
             wanted_ticks: Vec::new(),
-            wanted_events: Vec::new(),
+            wanted_events: wanted.events,
             parse_ents: true,
             parse_projectiles: false,
-            parse_grenades: false,
+            parse_grenades: true,
             only_header: false,
             only_convars: false,
             huffman_lookup_table: &huffman_table, // Use the longer-lived reference
             order_by_steamid: false,
             list_props: false,
             fallback_bytes: None,
-        },
-        ParsingMode::Normal,
-    );
-
+        }, ParsingMode::Normal);
     // Use parse_demo with the bytes
     let parsed = parser.parse_demo(&bytes)?;
 
@@ -149,7 +143,11 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .unwrap_or(0.0),
                     weapon_id: weap_id,
                     ammo: c.ammo_clip.unwrap_or(0) as f32,
-                    is_airborne: if c.props.get("m_hGroundEntity").is_none_or(|v| v == "-1") {
+                    is_airborne: if c
+                        .props
+                        .get("m_hGroundEntity")
+                        .is_none_or(|v| v == "-1")
+                    {
                         1.0
                     } else {
                         0.0
@@ -159,7 +157,8 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .get("m_angEyeAngles[1]")
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(0.0)
-                        - c.props
+                        - c
+                            .props
                             .get("m_angEyeAngles[1]")
                             .and_then(|v| v.parse().ok())
                             .unwrap_or(0.0),
@@ -168,7 +167,8 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
                         .get("m_angEyeAngles[0]")
                         .and_then(|v| v.parse().ok())
                         .unwrap_or(0.0)
-                        - c.props
+                        - c
+                            .props
                             .get("m_angEyeAngles[0]")
                             .and_then(|v| v.parse().ok())
                             .unwrap_or(0.0),
@@ -182,15 +182,13 @@ fn process_ticks(parsed: &DemoOutput, out: &mut Vec<BehavioralVector>) -> Result
 
 // Helper function to extract player IDs from a PropColumn
 fn get_player_ids(_data: &PropColumn) -> Vec<u32> {
-    // Implementation depends on how player data is stored in PropColumn
-    // This is a placeholder - adjust based on actual data structure
-    vec![1, 2, 3, 4, 5] // Placeholder for player IDs
+    // Placeholder
+    vec![1, 2, 3, 4, 5]
 }
 
 // Helper function to create a PlayerMeta from PropColumn data
 fn create_player_meta(_data: &PropColumn, player_id: u32) -> PlayerMeta {
-    // Implementation depends on how player data is stored in PropColumn
-    // This is a placeholder - adjust based on actual data structure
+    // Placeholder
     PlayerMeta {
         steamid: 76561198000000000 + player_id as u64,
         props: HashMap::from([
@@ -228,7 +226,7 @@ pub fn write_to_parquet(vecs: &[BehavioralVector], path: impl AsRef<Path>) -> Re
         Field::new("vel_z", DataType::Float32, false),
         Field::new("yaw", DataType::Float32, false),
         Field::new("pitch", DataType::Float32, false),
-        Field::new("weapon_id", DataType::UInt32, false), // Changed from UInt16 to UInt32
+        Field::new("weapon_id", DataType::UInt32, false),
         Field::new("ammo", DataType::Float32, false),
         Field::new("is_airborne", DataType::Float32, false),
         Field::new("delta_yaw", DataType::Float32, false),
@@ -255,7 +253,7 @@ pub fn write_to_parquet(vecs: &[BehavioralVector], path: impl AsRef<Path>) -> Re
         Arc::new(Float32Array::from_iter_values(vecs.iter().map(|v| v.pitch))),
         Arc::new(UInt32Array::from_iter_values(
             vecs.iter().map(|v| v.weapon_id as u32),
-        )), // Cast to u32
+        )),
         Arc::new(Float32Array::from_iter_values(vecs.iter().map(|v| v.ammo))),
         Arc::new(Float32Array::from_iter_values(
             vecs.iter().map(|v| v.is_airborne),
@@ -270,18 +268,14 @@ pub fn write_to_parquet(vecs: &[BehavioralVector], path: impl AsRef<Path>) -> Re
 
     let batch = RecordBatch::try_new(Arc::new(schema.clone()), arrays)?;
 
-    // Fix the writer initialization to provide the WriterProperties correctly
     let props = WriterProperties::builder().build();
     let mut writer = ArrowWriter::try_new(
         file,
         Arc::new(schema),
-        Some(props), // Don't wrap in Arc, as try_new expects WriterProperties directly
+        Some(props),
     )?;
 
-    // Write the batch directly
     writer.write(&batch)?;
-
-    // Close and flush the writer
     writer.close()?;
 
     Ok(())
@@ -371,11 +365,10 @@ mod tests {
 
         // Read it back and verify all fields
         let reader = SerializedFileReader::new(File::open(&test_file).unwrap()).unwrap();
-        let row_iter = reader.get_row_iter(None).unwrap(); // Remove mut
+        let row_iter = reader.get_row_iter(None).unwrap();
 
         for (i, row_result) in row_iter.enumerate() {
             let row = row_result.unwrap();
-            // Use correct type accessors for UInt32 fields
             assert_eq!(row.get_uint(0).unwrap(), vectors[i].tick);
             assert_eq!(row.get_ulong(1).unwrap(), vectors[i].steamid);
             assert_eq!(row.get_float(2).unwrap(), vectors[i].health);
@@ -388,7 +381,6 @@ mod tests {
             assert_eq!(row.get_float(9).unwrap(), vectors[i].vel_z);
             assert_eq!(row.get_float(10).unwrap(), vectors[i].yaw);
             assert_eq!(row.get_float(11).unwrap(), vectors[i].pitch);
-            // Use correct type accessor for UInt32 weapon_id field
             assert_eq!(row.get_uint(12).unwrap(), vectors[i].weapon_id as u32);
             assert_eq!(row.get_float(13).unwrap(), vectors[i].ammo);
             assert_eq!(row.get_float(14).unwrap(), vectors[i].is_airborne);

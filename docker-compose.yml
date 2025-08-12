@@ -25,6 +25,7 @@ services:
     environment:
       QDRANT__SERVICE__HTTP_PORT: 6333
       QDRANT__SERVICE__GRPC_PORT: 6334
+      QDRANT__SERVICE__API_KEY: "1234"
     restart: unless-stopped
 
   # Redis for caching and job queues
@@ -36,22 +37,32 @@ services:
       - redis_data:/data
     restart: unless-stopped
 
-  # MinIO for object storage (demo files, exports)
-  minio:
-    image: minio/minio:latest
+  # Garage (S3-compatible object storage) — single node
+  garage:
+    image: dxflrs/garage:v2.0.0
+    container_name: garage
+    command: [ "/garage", "-c", "/etc/garage/config.toml", "server" ]
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "3900:3900" # S3 API
+      - "3901:3901" # RPC
+      - "3903:3903" # Admin API
     volumes:
-      - minio_data:/data
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
-    command: server /data --console-address ":9001"
+      - ./garage/config.toml:/etc/garage/config.toml:ro
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - garage_etc:/etc/garage
+    healthcheck:
+      # Use exec (no shell inside the image)
+      test: [ "CMD", "/garage", "-c", "/etc/garage/config.toml", "status" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
 volumes:
   postgres_data:
   qdrant_data:
   redis_data:
-  minio_data:
+  garage_meta:
+  garage_data:
+  garage_etc:

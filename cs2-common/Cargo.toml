@@ -8,6 +8,7 @@ serde = { version = "1.0", features = ["derive"] }
 bytemuck = { version = "1.14", features = ["derive"] }
 thiserror = "2.0"
 anyhow = "1.0"
+bitflags = "2"
 
 [dev-dependencies]
 rstest = "0.26"

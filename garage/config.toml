@@ -1,0 +1,33 @@
+# Single-node Garage configuration
+# Docs: https://garagehq.deuxfleurs.fr/documentation/cookbook/real-world/
+
+# Storage locations
+metadata_dir = "/var/lib/garage/meta"
+data_dir = "/var/lib/garage/data"
+db_engine = "lmdb"
+metadata_auto_snapshot_interval = "6h"
+compression_level = 2
+replication_factor = 1
+
+# Node identity
+node_name = "node1"
+rpc_bind_addr = "0.0.0.0:3901"
+rpc_public_addr = "garage:3901"
+rpc_secret = "2e17f178c41a978a45bba456b90d82ce475e43665c982f1bfe6ee6e2b9ba807c"
+bootstrap_peers = []
+
+# S3-compatible API
+[s3_api]
+bind_addr = "0.0.0.0:3900"
+s3_region = "us-east-1"
+api_bind_addr = "[::]:3900"
+
+# Admin API (secured by static API token)
+[admin]
+bind_addr = "0.0.0.0:3903"
+api_token = "fpsgenie"
+
+[s3_web]
+bind_addr = "[::]:3902"
+root_domain = ".web.garage"
+index = "index.html"
