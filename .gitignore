@@ -201,3 +201,4 @@ temp/
 # Test databases
 test.db*
 
+/garage/s3-credentials.env
