@@ -19,6 +19,20 @@ const NSERIALBITS: u32 = 17;
 const STOP_READING_SYMBOL: u8 = 39;
 const HUFFMAN_CODE_MAXLEN: u32 = 17;
 
+#[derive(Debug)]
+pub struct DebugInspectArgs<'a> {
+    pub result: &'a Variant,
+    pub field: &'a Field,
+    pub tick: i32,
+    pub field_info: Option<FieldInfo>,
+    pub path: &'a FieldPath,
+    pub is_fullpacket: bool,
+    pub is_baseline: bool,
+    pub cls: &'a Class,
+    pub cls_id: &'a u32,
+    pub entity_id: &'a i32,
+}
+
 #[derive(Debug, Clone)]
 pub struct Entity {
     pub cls_id: u32,
@@ -255,39 +269,29 @@ impl<'a> SecondPassParser<'a> {
             }
             // Debug
             if self.is_debug_mode {
-                SecondPassParser::debug_inspect(
-                    &result,
+                let args = DebugInspectArgs {
+                    result: &result,
                     field,
-                    self.tick,
+                    tick: self.tick,
                     field_info,
                     path,
                     is_fullpacket,
                     is_baseline,
-                    class,
-                    &entity.cls_id,
-                    &entity_id,
-                );
+                    cls: class,
+                    cls_id: &entity.cls_id,
+                    entity_id: &entity_id,
+                };
+                SecondPassParser::debug_inspect(args);
             }
 
             SecondPassParser::insert_field(entity, result, field_info);
         }
         Ok(n_updates)
     }
-    pub fn debug_inspect(
-        _result: &Variant,
-        field: &Field,
-        _tick: i32,
-        field_info: Option<FieldInfo>,
-        _path: &FieldPath,
-        _is_fullpacket: bool,
-        _is_baseline: bool,
-        _cls: &Class,
-        _cls_id: &u32,
-        _entity_id: &i32,
-    ) {
-        if let Field::Value(_v) = field {
+    pub fn debug_inspect(args: DebugInspectArgs) {
+        if let Field::Value(_v) = args.field {
             if _v.full_name.contains("m_vLookTargetPosition") {
-                println!("{:?} {:?} {:?} {:?}", _path, field_info, _v.full_name, _result);
+                println!("{:?} {:?} {:?} {:?}", args.path, args.field_info, _v.full_name, args.result);
             }
         }
     }
@@ -315,7 +319,7 @@ impl<'a> SecondPassParser<'a> {
         }
         Ok(())
     }
-    fn create_new_entity(&mut self, bitreader: &mut Bitreader, entity_id: &i32, _events_to_emit: &mut Vec<GameEventInfo>) -> Result<(), DemoParserError> {
+    fn create_new_entity(&mut self, bitreader: &mut Bitreader, entity_id: &i32, _events_to_emit: &mut [GameEventInfo]) -> Result<(), DemoParserError> {
         let cls_id: u32 = bitreader.read_nbits(8)?;
         // Both of these are not used. Don't think they are interesting for the parser
         let _serial = bitreader.read_nbits(NSERIALBITS)?;

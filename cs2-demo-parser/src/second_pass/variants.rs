@@ -141,6 +141,25 @@ impl PropColumn {
             None => self.num_nones,
         }
     }
+    pub fn is_empty(&self) -> bool {
+        match &self.data {
+            Some(VarVec::Bool(b)) => b.is_empty(),
+            Some(VarVec::I32(b)) => b.is_empty(),
+            Some(VarVec::F32(b)) => b.is_empty(),
+            Some(VarVec::String(b)) => b.is_empty(),
+            Some(VarVec::U32(b)) => b.is_empty(),
+            Some(VarVec::U64(b)) => b.is_empty(),
+            Some(VarVec::StringVec(b)) => b.is_empty(),
+            Some(VarVec::U64Vec(b)) => b.is_empty(),
+            Some(VarVec::U32Vec(b)) => b.is_empty(),
+            Some(VarVec::XYVec(b)) => b.is_empty(),
+            Some(VarVec::XYZVec(b)) => b.is_empty(),
+            Some(VarVec::Stickers(b)) => b.is_empty(),
+            Some(VarVec::InputHistory(b)) => b.is_empty(),
+            None => self.num_nones == 0,
+        }
+    }
+
     pub fn extend_from(&mut self, other: &mut PropColumn) {
         match &mut self.data {
             Some(VarVec::Bool(v)) => match &other.data {

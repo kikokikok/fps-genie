@@ -84,10 +84,7 @@ impl<'a> SecondPassParser<'a> {
             }
 
             for prop_info in &self.prop_controller.prop_infos {
-                let player_steamid = match player.steamid {
-                    Some(steamid) => steamid,
-                    None => 0,
-                };
+                let player_steamid = player.steamid.unwrap_or_default();
                 if !self.wanted_players.is_empty() && !self.wanted_players.contains(&player_steamid) {
                     continue;
                 }

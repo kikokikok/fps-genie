@@ -131,7 +131,7 @@ impl<'a> FirstPassParser<'a> {
         }
         // Creates serializers
         for serializer in &serializer_msg.serializers {
-            let mut ser = self.generate_serializer(serializer, &mut fields, serializer_msg, &mut serializers)?;
+            let mut ser = self.generate_serializer(serializer, &mut fields, serializer_msg, &serializers)?;
             if ser.name.contains("Player")
                 || ser.name.contains("Controller")
                 || ser.name.contains("Team")
@@ -164,7 +164,7 @@ impl<'a> FirstPassParser<'a> {
     fn generate_serializer(
         &mut self,
         serializer_msg: &ProtoFlattenedSerializerT,
-        field_data: &mut Vec<Option<ConstructorField>>,
+        field_data: &mut [Option<ConstructorField>],
         big: &CsvcMsgFlattenedSerializer,
         serializers: &AHashMap<String, Serializer>,
     ) -> Result<Serializer, DemoParserError> {
@@ -516,7 +516,7 @@ pub fn get_propinfo(field: &Field, path: &FieldPath) -> Option<FieldInfo> {
     Some(fi)
 }
 
-fn create_field(_sid: &String, fd: &mut ConstructorField, serializers: &AHashMap<String, Serializer>) -> Result<Field, DemoParserError> {
+fn create_field(_sid: &str, fd: &mut ConstructorField, serializers: &AHashMap<String, Serializer>) -> Result<Field, DemoParserError> {
     /*
     TODO
     let element_type = match fd.category {

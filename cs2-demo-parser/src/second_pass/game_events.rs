@@ -453,28 +453,16 @@ impl<'a> SecondPassParser<'a> {
         Ok(())
     }
     fn contains_round_end_event(events: &[GameEventInfo]) -> bool {
-        events.iter().any(|s| match s {
-            &GameEventInfo::RoundEnd(_) => true,
-            _ => false,
-        })
+        events.iter().any(|s| matches!(s, GameEventInfo::RoundEnd(_)))
     }
     fn contains_freeze_period_start(events: &[GameEventInfo]) -> bool {
-        events.iter().any(|s| match s {
-            &GameEventInfo::FreezePeriodStart(_) => true,
-            _ => false,
-        })
+        events.iter().any(|s| matches!(s, GameEventInfo::FreezePeriodStart(_)))
     }
     fn contains_match_end(events: &[GameEventInfo]) -> bool {
-        events.iter().any(|s| match s {
-            &GameEventInfo::MatchEnd() => true,
-            _ => false,
-        })
+        events.iter().any(|s| matches!(s, GameEventInfo::MatchEnd()))
     }
     fn contains_weapon_create(events: &[GameEventInfo]) -> bool {
-        events.iter().any(|s| match s {
-            &GameEventInfo::WeaponCreateDefIdx(_) => true,
-            _ => false,
-        })
+        events.iter().any(|s| matches!(s, GameEventInfo::WeaponCreateDefIdx(_)))
     }
     pub fn emit_events(&mut self, events: Vec<GameEventInfo>) -> Result<(), DemoParserError> {
         if SecondPassParser::contains_round_end_event(&events) {
@@ -549,11 +537,11 @@ impl<'a> SecondPassParser<'a> {
         // Filter purchase events
         let filtered_events = events
             .iter()
-            .filter(|x| match x {
-                GameEventInfo::WeaponCreateDefIdx(_) => true,
-                GameEventInfo::WeaponCreateNCost(_) => true,
-                GameEventInfo::WeaponCreateHitem(_) => true,
-                _ => false,
+            .filter(|x| {
+                matches!(
+                    x,
+                    GameEventInfo::WeaponCreateDefIdx(_) | GameEventInfo::WeaponCreateNCost(_) | GameEventInfo::WeaponCreateHitem(_)
+                )
             })
             .collect_vec();
         let mut purchases = vec![];
@@ -1062,12 +1050,12 @@ fn parse_key(key: &KeyT) -> Option<Variant> {
         2 => Some(Variant::F32(key.val_float())),
         // These seem to return an i32
         3 => Some(Variant::I32(key.val_long())),
-        4 => Some(Variant::I32(key.val_short().try_into().unwrap_or(-1))),
-        5 => Some(Variant::I32(key.val_byte().try_into().unwrap_or(-1))),
+        4 => Some(Variant::I32(key.val_short())),
+        5 => Some(Variant::I32(key.val_byte())),
         6 => Some(Variant::Bool(key.val_bool())),
         7 => Some(Variant::U64(key.val_uint64())),
-        8 => Some(Variant::I32(key.val_long().try_into().unwrap_or(-1))),
-        9 => Some(Variant::I32(key.val_short().try_into().unwrap_or(-1))),
+        8 => Some(Variant::I32(key.val_long())),
+        9 => Some(Variant::I32(key.val_short())),
         _ => None,
     }
 }

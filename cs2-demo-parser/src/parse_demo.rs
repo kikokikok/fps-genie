@@ -108,6 +108,7 @@ impl<'a> Parser<'a> {
         Parser::remove_item_sold_events(&mut outputs.game_events);
         Ok(outputs)
     }
+    #[allow(dead_code)]
     fn second_pass_threaded_with_channels(
         &self,
         outer_bytes: &[u8],
@@ -163,6 +164,7 @@ impl<'a> Parser<'a> {
             Ok(outputs)
         })
     }
+    #[allow(dead_code)]
     fn second_pass_multi_threaded_no_channels(&self, outer_bytes: &[u8], first_pass_output: FirstPassOutput) -> Result<DemoOutput, DemoParserError> {
         let second_pass_outputs: Vec<Result<SecondPassOutput, DemoParserError>> = first_pass_output
             .fullpacket_offsets
@@ -258,7 +260,7 @@ impl<'a> Parser<'a> {
         Some(new_df)
     }
 
-    fn combine_outputs(&self, second_pass_outputs: &mut Vec<SecondPassOutput>, first_pass_output: FirstPassOutput) -> DemoOutput {
+    fn combine_outputs(&self, second_pass_outputs: &mut [SecondPassOutput], first_pass_output: FirstPassOutput) -> DemoOutput {
         // Combines all inner DemoOutputs into one big output
         second_pass_outputs.sort_by_key(|x| x.ptr);
 

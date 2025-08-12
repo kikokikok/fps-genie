@@ -31,20 +31,32 @@ pub struct UserInfo {
     pub is_hltv: bool,
 }
 
+#[derive(Debug)]
+pub struct StringTableParams {
+    pub bytes: Vec<u8>,
+    pub n_updates: i32,
+    pub name: String,
+    pub udf: bool,
+    pub user_data_size: i32,
+    pub flags: i32,
+    pub variant_bit_count: bool,
+}
+
 impl<'a> FirstPassParser<'a> {
     pub fn update_string_table(&mut self, bytes: &[u8]) -> Result<(), DemoParserError> {
         let table = CsvcMsgUpdateStringTable::decode(bytes).map_err(|_| DemoParserError::MalformedMessage)?;
 
         let st = self.string_tables.get(table.table_id() as usize).ok_or(DemoParserError::StringTableNotFound)?;
-        self.parse_string_table(
-            table.string_data().to_vec(),
-            table.num_changed_entries(),
-            st.name.clone(),
-            st.user_data_fixed,
-            st.user_data_size,
-            st.flags,
-            st.var_bit_counts,
-        )?;
+        let params = StringTableParams {
+            bytes: table.string_data().to_vec(),
+            n_updates: table.num_changed_entries(),
+            name: st.name.clone(),
+            udf: st.user_data_fixed,
+            user_data_size: st.user_data_size,
+            flags: st.flags,
+            variant_bit_count: st.var_bit_counts,
+        };
+        self.parse_string_table(params)?;
         Ok(())
     }
 
@@ -60,33 +72,25 @@ impl<'a> FirstPassParser<'a> {
                 .map_err(|_| DemoParserError::MalformedMessage)?,
             false => table.string_data().to_vec(),
         };
-        self.parse_string_table(
+        let params = StringTableParams {
             bytes,
-            table.num_entries(),
-            table.name().to_string(),
-            table.user_data_fixed_size(),
-            table.user_data_size(),
-            table.flags(),
-            table.using_varint_bitcounts(),
-        )?;
+            n_updates: table.num_entries(),
+            name: table.name().to_string(),
+            udf: table.user_data_fixed_size(),
+            user_data_size: table.user_data_size(),
+            flags: table.flags(),
+            variant_bit_count: table.using_varint_bitcounts(),
+        };
+        self.parse_string_table(params)?;
         Ok(())
     }
-    pub fn parse_string_table(
-        &mut self,
-        bytes: Vec<u8>,
-        n_updates: i32,
-        name: String,
-        udf: bool,
-        user_data_size: i32,
-        flags: i32,
-        variant_bit_count: bool,
-    ) -> Result<(), DemoParserError> {
-        let mut bitreader = Bitreader::new(&bytes);
+    pub fn parse_string_table(&mut self, params: StringTableParams) -> Result<(), DemoParserError> {
+        let mut bitreader = Bitreader::new(&params.bytes);
         let mut idx = -1;
         let mut keys: Vec<String> = vec![];
         let mut items = vec![];
 
-        for _upd in 0..n_updates {
+        for _upd in 0..params.n_updates {
             let mut key = "".to_owned();
             let mut value = vec![];
 
@@ -128,13 +132,13 @@ impl<'a> FirstPassParser<'a> {
                     let bits: u32;
                     let mut is_compressed = false;
 
-                    match udf {
-                        true => bits = user_data_size as u32,
+                    match params.udf {
+                        true => bits = params.user_data_size as u32,
                         false => {
-                            if (flags & 0x1) != 0 {
+                            if (params.flags & 0x1) != 0 {
                                 is_compressed = bitreader.read_boolean()?;
                             }
-                            if variant_bit_count {
+                            if params.variant_bit_count {
                                 bits = bitreader.read_u_bit_var()? * 8;
                             } else {
                                 bits = bitreader.read_nbits(17)? * 8;
@@ -151,14 +155,14 @@ impl<'a> FirstPassParser<'a> {
                         value
                     };
                 }
-                if name == "userinfo" {
+                if params.name == "userinfo" {
                     if let Ok(player) = parse_userinfo(&value) {
                         if player.steamid != 0 {
                             self.stringtable_players.insert(player.userid, player);
                         }
                     }
                 }
-                if name == "instancebaseline" {
+                if params.name == "instancebaseline" {
                     match key.parse::<u32>() {
                         Ok(cls_id) => self.baselines.insert(cls_id, value.clone()),
                         Err(_e) => None,
@@ -169,11 +173,11 @@ impl<'a> FirstPassParser<'a> {
         }
         self.string_tables.push(StringTable {
             data: items,
-            name,
-            user_data_size,
-            user_data_fixed: udf,
-            flags,
-            var_bit_counts: variant_bit_count,
+            name: params.name,
+            user_data_size: params.user_data_size,
+            user_data_fixed: params.udf,
+            flags: params.flags,
+            var_bit_counts: params.variant_bit_count,
         });
         Ok(())
     }
@@ -192,15 +196,18 @@ impl<'a> SecondPassParser<'a> {
     pub fn update_string_table(&mut self, bytes: &[u8]) -> Result<(), DemoParserError> {
         let table = CsvcMsgUpdateStringTable::decode(bytes).map_err(|_| DemoParserError::MalformedMessage)?;
         match self.string_tables.get(table.table_id() as usize) {
-            Some(st) => self.parse_string_table(
-                table.string_data().to_vec(),
-                table.num_changed_entries(),
-                st.name.clone(),
-                st.user_data_fixed,
-                st.user_data_size,
-                st.flags,
-                st.var_bit_counts,
-            )?,
+            Some(st) => {
+                let params = StringTableParams {
+                    bytes: table.string_data().to_vec(),
+                    n_updates: table.num_changed_entries(),
+                    name: st.name.clone(),
+                    udf: st.user_data_fixed,
+                    user_data_size: st.user_data_size,
+                    flags: st.flags,
+                    variant_bit_count: st.var_bit_counts,
+                };
+                self.parse_string_table(params)?;
+            }
             None => {
                 return Ok(());
             }
@@ -215,33 +222,25 @@ impl<'a> SecondPassParser<'a> {
                 .map_err(|_| DemoParserError::MalformedMessage)?,
             false => table.string_data().to_vec(),
         };
-        self.parse_string_table(
+        let params = StringTableParams {
             bytes,
-            table.num_entries(),
-            table.name().to_string(),
-            table.user_data_fixed_size(),
-            table.user_data_size(),
-            table.flags(),
-            table.using_varint_bitcounts(),
-        )?;
+            n_updates: table.num_entries(),
+            name: table.name().to_string(),
+            udf: table.user_data_fixed_size(),
+            user_data_size: table.user_data_size(),
+            flags: table.flags(),
+            variant_bit_count: table.using_varint_bitcounts(),
+        };
+        self.parse_string_table(params)?;
         Ok(())
     }
-    pub fn parse_string_table(
-        &mut self,
-        bytes: Vec<u8>,
-        n_updates: i32,
-        name: String,
-        udf: bool,
-        user_data_size: i32,
-        flags: i32,
-        variant_bit_count: bool,
-    ) -> Result<(), DemoParserError> {
-        let mut bitreader = Bitreader::new(&bytes);
+    pub fn parse_string_table(&mut self, params: StringTableParams) -> Result<(), DemoParserError> {
+        let mut bitreader = Bitreader::new(&params.bytes);
         let mut idx = -1;
         let mut keys: Vec<String> = vec![];
         let mut items = vec![];
 
-        for _upd in 0..n_updates {
+        for _upd in 0..params.n_updates {
             let mut key = "".to_owned();
             let mut value = vec![];
 
@@ -284,13 +283,13 @@ impl<'a> SecondPassParser<'a> {
                     let bits: u32;
                     let mut is_compressed = false;
 
-                    match udf {
-                        true => bits = user_data_size as u32,
+                    match params.udf {
+                        true => bits = params.user_data_size as u32,
                         false => {
-                            if (flags & 0x1) != 0 {
+                            if (params.flags & 0x1) != 0 {
                                 is_compressed = bitreader.read_boolean()?;
                             }
-                            if variant_bit_count {
+                            if params.variant_bit_count {
                                 bits = bitreader.read_u_bit_var()? * 8;
                             } else {
                                 bits = bitreader.read_nbits(17)? * 8;
@@ -307,14 +306,14 @@ impl<'a> SecondPassParser<'a> {
                         value
                     };
                 }
-                if name == "userinfo" {
+                if params.name == "userinfo" {
                     if let Ok(player) = parse_userinfo(&value) {
                         if player.steamid != 0 {
                             self.stringtable_players.insert(player.userid, player);
                         }
                     }
                 }
-                if name == "instancebaseline" {
+                if params.name == "instancebaseline" {
                     match key.parse::<u32>() {
                         Ok(cls_id) => self.baselines.insert(cls_id, value.clone()),
                         Err(_e) => None,
@@ -325,11 +324,11 @@ impl<'a> SecondPassParser<'a> {
         }
         self.string_tables.push(StringTable {
             data: items,
-            name,
-            user_data_size,
-            user_data_fixed: udf,
-            flags,
-            var_bit_counts: variant_bit_count,
+            name: params.name,
+            user_data_size: params.user_data_size,
+            user_data_fixed: params.udf,
+            flags: params.flags,
+            var_bit_counts: params.variant_bit_count,
         });
         Ok(())
     }

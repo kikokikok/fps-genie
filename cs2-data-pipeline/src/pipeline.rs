@@ -187,7 +187,7 @@ impl DemoProcessor {
 
     fn build_parser_inputs(bytes: &[u8]) -> ParserInputs<'_> {
         static EMPTY_LOOKUP: OnceLock<Vec<(u8, u8)>> = OnceLock::new();
-        let lut = EMPTY_LOOKUP.get_or_init(|| Vec::new());
+        let lut = EMPTY_LOOKUP.get_or_init(Vec::new);
 
         ParserInputs {
             real_name_to_og_name: ahash::AHashMap::new(),
@@ -330,6 +330,7 @@ impl DemoProcessor {
         let mut moments: Vec<KeyMoment> = Vec::new();
 
         // Round trackers
+        #[allow(unused_variables)]
         let mut round_number: i32 = 0;
         let mut round_start_tick: u32 = 0;
         let mut round_first_blood_done = false;
@@ -714,6 +715,7 @@ impl DemoProcessor {
 
                 // Movement/aim summaries
                 let mut path_len = 0.0_f32;
+                #[allow(unused_variables)]
                 let mut avg_speed = 0.0_f32;
                 let mut max_speed = 0.0_f32;
                 let mut time_scoped_ticks = 0u32;
@@ -772,9 +774,7 @@ impl DemoProcessor {
                 let shots: Vec<_> = fires
                     .iter()
                     .filter(|ev| {
-                        ev.attacker == *steamid
-                            && (m.start_tick as u32) <= ev.tick
-                            && ev.tick <= (m.end_tick as u32)
+                        ev.attacker == *steamid && m.start_tick <= ev.tick && ev.tick <= m.end_tick
                     })
                     .collect();
 
@@ -791,9 +791,7 @@ impl DemoProcessor {
                 let hits: Vec<_> = hurts
                     .iter()
                     .filter(|ev| {
-                        ev.attacker == *steamid
-                            && (m.start_tick as u32) <= ev.tick
-                            && ev.tick <= (m.end_tick as u32)
+                        ev.attacker == *steamid && m.start_tick <= ev.tick && ev.tick <= m.end_tick
                     })
                     .collect();
 
@@ -802,9 +800,7 @@ impl DemoProcessor {
                 let dmg_taken: i32 = hurts
                     .iter()
                     .filter(|ev| {
-                        ev.victim == *steamid
-                            && (m.start_tick as u32) <= ev.tick
-                            && ev.tick <= (m.end_tick as u32)
+                        ev.victim == *steamid && m.start_tick <= ev.tick && ev.tick <= m.end_tick
                     })
                     .map(|ev| ev.dmg)
                     .sum();
@@ -812,18 +808,14 @@ impl DemoProcessor {
                 let kills_count = deaths
                     .iter()
                     .filter(|ev| {
-                        ev.killer == *steamid
-                            && (m.start_tick as u32) <= ev.tick
-                            && ev.tick <= (m.end_tick as u32)
+                        ev.killer == *steamid && m.start_tick <= ev.tick && ev.tick <= m.end_tick
                     })
                     .count() as i32;
 
                 let deaths_count = deaths
                     .iter()
                     .filter(|ev| {
-                        ev.victim == *steamid
-                            && (m.start_tick as u32) <= ev.tick
-                            && ev.tick <= (m.end_tick as u32)
+                        ev.victim == *steamid && m.start_tick <= ev.tick && ev.tick <= m.end_tick
                     })
                     .count() as i32;
 

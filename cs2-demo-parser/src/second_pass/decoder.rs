@@ -92,8 +92,8 @@ impl<'a> Bitreader<'a> {
     }
     pub fn decode_vector_float_coord(&mut self) -> Result<[f32; 3], DemoParserError> {
         let mut v = [0.0; 3];
-        for idx in 0..3 {
-            v[idx] = self.decode_float_coord()?;
+        for (item, val) in v.iter_mut().zip((0..3).map(|_| self.decode_float_coord())) {
+            *item = val?;
         }
         Ok(v)
     }
@@ -106,8 +106,8 @@ impl<'a> Bitreader<'a> {
     }
     pub fn decode_vector_noscale(&mut self) -> Result<[f32; 3], DemoParserError> {
         let mut v = [0.0; 3];
-        for idx in 0..3 {
-            v[idx] = self.decode_noscale()?;
+        for (item, val) in v.iter_mut().zip((0..3).map(|_| self.decode_noscale())) {
+            *item = val?;
         }
         Ok(v)
     }
@@ -250,14 +250,7 @@ impl QuantalizedFloat {
     fn assign_multipliers(&mut self, steps: u32) {
         self.high_low_mul = 0.0;
         let range = self.high - self.low;
-
-        let high: u32;
-        if self.bit_count == 32 {
-            high = 0xFFFFFFFE;
-        } else {
-            high = (1 << self.bit_count) - 1;
-        }
-
+        let high: u32 = if self.bit_count == 32 { 0xFFFFFFFE } else { (1 << self.bit_count) - 1 };
         let mut high_mul: f32;
         // Xd?
         if range.abs() <= 0.0 {

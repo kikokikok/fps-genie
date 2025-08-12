@@ -1,15 +1,13 @@
-use crate::test_infrastructure::{TestDataFactory, TestInfrastructure};
-
 /// End-to-end tests for the complete demo processing pipeline
 #[cfg(test)]
 mod e2e_pipeline_tests {
-    use super::*;
+    use crate::TestDataFactory;
+    use crate::TestInfrastructure;
     use anyhow::Result;
     use cs2_data_pipeline::models::ProcessingStatus;
     use std::time::Duration;
     use tokio::time::timeout;
     use tracing::{info, warn};
-    use uuid::Uuid;
 
     #[tokio::test]
     async fn test_complete_demo_processing_pipeline() -> Result<()> {
@@ -179,7 +177,8 @@ mod e2e_pipeline_tests {
 /// Performance and load tests
 #[cfg(test)]
 mod performance_tests {
-    use super::*;
+    use crate::TestDataFactory;
+    use crate::TestInfrastructure;
     use tracing::info;
 
     #[tokio::test]
@@ -274,7 +273,7 @@ mod performance_tests {
 /// Integration tests for external APIs and services
 #[cfg(test)]
 mod api_integration_tests {
-    use super::*;
+    use crate::TestInfrastructure;
     use std::time::Duration;
     use tokio::time::timeout;
     use tracing::{info, warn};
