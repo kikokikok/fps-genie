@@ -1,8 +1,14 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
-use cs2_common::BehavioralVector;
+use cs2_common::{
+    BehavioralVector, 
+    PlayerMechanicsExtractor, TeamDynamicsExtractor, DecisionMetricsExtractor, TemporalContextExtractor,
+    ExtractedFeatures
+};
+use cs2_ml::{PlayerStyleClassifier, TeamDynamicsTransformer, DecisionQualityRNN};
 use plotters::prelude::*;
 use polars::prelude::*;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::info;
 
@@ -61,11 +67,47 @@ fn main() -> Result<()> {
 
     match cli.command {
         Commands::Analyze { demo, output_dir } => {
-            info!("Analyzing demo file: {}", demo.display());
+            info!("Analyzing demo file with comprehensive feature extraction: {}", demo.display());
 
             // Parse the demo and extract behavioral vectors
             let vectors = cs2_ml::data::vectors_from_demo(&demo)?;
             info!("Extracted {} behavioral vectors", vectors.len());
+
+            // Group vectors by player
+            let mut player_vectors: HashMap<u64, Vec<BehavioralVector>> = HashMap::new();
+            for vector in vectors {
+                player_vectors.entry(vector.steamid).or_default().push(vector);
+            }
+
+            info!("Found {} unique players", player_vectors.len());
+
+            // Initialize comprehensive feature extractors
+            let mechanics_extractor = PlayerMechanicsExtractor::new();
+            let team_extractor = TeamDynamicsExtractor::new();
+            let decision_extractor = DecisionMetricsExtractor::new();
+            let temporal_extractor = TemporalContextExtractor::new();
+
+            // Extract comprehensive features for each player
+            let mut all_extracted_features: HashMap<u64, ExtractedFeatures> = HashMap::new();
+            
+            for (&player_id, player_vecs) in &player_vectors {
+                info!("Extracting comprehensive features for player {}", player_id);
+                
+                // Extract all feature types
+                let player_mechanics = mechanics_extractor.extract_features(player_vecs);
+                let team_dynamics = team_extractor.extract_features(&player_vectors);
+                let decision_metrics = decision_extractor.extract_features(player_vecs, &player_vectors);
+                let temporal_context = temporal_extractor.extract_features(player_vecs, &player_vectors, Some("de_dust2"));
+                
+                let extracted_features = ExtractedFeatures {
+                    player_mechanics,
+                    team_dynamics,
+                    decision_metrics,
+                    temporal_context,
+                };
+                
+                all_extracted_features.insert(player_id, extracted_features);
+            }
 
             // Determine output directory
             let output_dir = output_dir.unwrap_or_else(|| {
@@ -79,20 +121,25 @@ fn main() -> Result<()> {
             // Create the output directory
             std::fs::create_dir_all(&output_dir)?;
 
-            // Save the vectors to a parquet file
+            // Save the basic vectors to a parquet file (for compatibility)
+            let all_vectors: Vec<BehavioralVector> = player_vectors.values().flatten().cloned().collect();
             let parquet_path = output_dir.join("vectors.parquet");
-            cs2_ml::data::write_parquet(&vectors, &parquet_path)?;
+            cs2_ml::data::write_parquet(&all_vectors, &parquet_path)?;
             info!("Wrote behavioral vectors to {}", parquet_path.display());
 
-            // Generate basic statistics
-            generate_statistics(&vectors, &output_dir)?;
+            // Generate comprehensive analysis using ML models
+            generate_ml_analysis(&all_extracted_features, &output_dir)?;
 
-            // Generate visualizations
-            generate_player_movement_chart(&vectors, &output_dir.join("movement.png"))?;
-            generate_aim_patterns_chart(&vectors, &output_dir.join("aim.png"))?;
+            // Generate traditional statistics and visualizations
+            generate_statistics(&all_vectors, &output_dir)?;
+            generate_player_movement_chart(&all_vectors, &output_dir.join("movement.png"))?;
+            generate_aim_patterns_chart(&all_vectors, &output_dir.join("aim.png"))?;
+
+            // Generate comprehensive feature analysis
+            generate_comprehensive_feature_analysis(&all_extracted_features, &output_dir)?;
 
             info!(
-                "Analysis complete. Results saved to {}",
+                "Comprehensive analysis complete. Results saved to {}",
                 output_dir.display()
             );
         }
@@ -345,6 +392,165 @@ fn generate_aim_visualization(_df: &DataFrame, output_path: &Path) -> Result<()>
 
     root.present()?;
     info!("Aim visualization saved to {}", output_path.display());
+
+    Ok(())
+}
+
+/// Generate ML-based analysis using the comprehensive feature extractors and models
+fn generate_ml_analysis(features: &HashMap<u64, ExtractedFeatures>, output_dir: &Path) -> Result<()> {
+    info!("Generating ML-based analysis");
+
+    // Initialize ML models (CPU for now, would use GPU in production)
+    let device = candle_core::Device::Cpu;
+    
+    // Create style classifier and analyze each player
+    let style_classifier = PlayerStyleClassifier::new(18, 6, 5, device.clone())?;
+    
+    for (&player_id, player_features) in features {
+        info!("Analyzing player style for player {}", player_id);
+        
+        match style_classifier.classify_player_style(player_features) {
+            Ok(style_prediction) => {
+                let analysis_path = output_dir.join(format!("player_{}_style_analysis.json", player_id));
+                let analysis_json = serde_json::to_string_pretty(&style_prediction)?;
+                std::fs::write(analysis_path, analysis_json)?;
+                
+                info!("Player {} classified as: {} (confidence: {:.2})", 
+                     player_id, style_prediction.primary_style, style_prediction.confidence);
+            }
+            Err(e) => {
+                info!("Warning: Could not classify player {} style: {}", player_id, e);
+            }
+        }
+    }
+
+    // Analyze team dynamics
+    if features.len() >= 2 {
+        info!("Analyzing team dynamics");
+        let team_transformer = TeamDynamicsTransformer::new(16, 8, 4, device.clone())?;
+        
+        match team_transformer.analyze_team_dynamics(features) {
+            Ok(team_analysis) => {
+                let team_path = output_dir.join("team_dynamics_analysis.json");
+                let team_json = serde_json::to_string_pretty(&team_analysis)?;
+                std::fs::write(team_path, team_json)?;
+                
+                info!("Team coordination score: {:.2}", team_analysis.coordination_score);
+                info!("Tactical cohesion: {:.2}", team_analysis.tactical_cohesion);
+            }
+            Err(e) => {
+                info!("Warning: Could not analyze team dynamics: {}", e);
+            }
+        }
+    }
+
+    // Analyze decision quality over time
+    info!("Analyzing decision quality patterns");
+    let decision_rnn = DecisionQualityRNN::new(10, 5, 32, device)?;
+    
+    for (&player_id, player_features) in features {
+        // Create a sequence of decision metrics (simplified - would need temporal segmentation in real implementation)
+        let decision_sequence = vec![player_features.decision_metrics.clone()];
+        
+        match decision_rnn.evaluate_decision_quality(&decision_sequence) {
+            Ok(quality_analysis) => {
+                let quality_path = output_dir.join(format!("player_{}_decision_quality.json", player_id));
+                let quality_json = serde_json::to_string_pretty(&quality_analysis)?;
+                std::fs::write(quality_path, quality_json)?;
+                
+                info!("Player {} decision quality: {:.2}", player_id, quality_analysis.overall_quality);
+            }
+            Err(e) => {
+                info!("Warning: Could not analyze decision quality for player {}: {}", player_id, e);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Generate comprehensive feature analysis reports
+fn generate_comprehensive_feature_analysis(features: &HashMap<u64, ExtractedFeatures>, output_dir: &Path) -> Result<()> {
+    info!("Generating comprehensive feature analysis");
+
+    // Create detailed analysis for each player
+    for (&player_id, player_features) in features {
+        let mut analysis_report = Vec::new();
+        
+        analysis_report.push(format!("=== Player {} Comprehensive Analysis ===\n", player_id));
+        
+        // Player Mechanics Analysis
+        analysis_report.push("## Player Mechanics Features".to_string());
+        analysis_report.push(format!("Headshot Percentage: {:.1}%", player_features.player_mechanics.headshot_percentage * 100.0));
+        analysis_report.push(format!("Flick Accuracy: {:.1}%", player_features.player_mechanics.flick_accuracy * 100.0));
+        analysis_report.push(format!("Target Acquisition Time: {:.3}s", player_features.player_mechanics.target_acquisition_time));
+        analysis_report.push(format!("Movement Efficiency: {:.1}%", player_features.player_mechanics.movement_efficiency * 100.0));
+        analysis_report.push(format!("Recoil Control Consistency: {:.1}%", player_features.player_mechanics.recoil_control_consistency * 100.0));
+        analysis_report.push("".to_string());
+        
+        // Team Dynamics Analysis
+        analysis_report.push("## Team Dynamics Features".to_string());
+        analysis_report.push(format!("Formation Preference: {:.1}% spread vs stack", player_features.team_dynamics.formation_spread_vs_stack * 100.0));
+        analysis_report.push(format!("Map Control: {:.1}%", player_features.team_dynamics.map_control_percentage * 100.0));
+        analysis_report.push(format!("Crossfire Effectiveness: {:.1}%", player_features.team_dynamics.crossfire_setup_effectiveness * 100.0));
+        analysis_report.push(format!("Trade Efficiency: {:.1}%", player_features.team_dynamics.trade_efficiency * 100.0));
+        analysis_report.push("".to_string());
+        
+        // Decision Metrics Analysis
+        analysis_report.push("## Decision Making Features".to_string());
+        analysis_report.push(format!("Buy Efficiency: {:.2} value/dollar", player_features.decision_metrics.buy_efficiency_value_per_dollar));
+        analysis_report.push(format!("Decision Speed: {:.1}%", player_features.decision_metrics.decision_speed_after_first_contact * 100.0));
+        analysis_report.push(format!("Reaction Time (Visual): {:.3}s", player_features.decision_metrics.reaction_time_visual_stimuli));
+        analysis_report.push(format!("Reaction Consistency: {:.1}%", player_features.decision_metrics.reaction_consistency * 100.0));
+        analysis_report.push("".to_string());
+        
+        // Temporal Context Analysis
+        analysis_report.push("## Temporal & Contextual Features".to_string());
+        analysis_report.push(format!("Clutch Performance: {:.1}%", player_features.temporal_context.clutch_performance_metrics * 100.0));
+        analysis_report.push(format!("Counter-Strategy Effectiveness: {:.1}%", player_features.temporal_context.counter_strategy_effectiveness * 100.0));
+        analysis_report.push(format!("Adaptation to Opponents: {:.1}%", player_features.temporal_context.adaptation_to_opponent_patterns * 100.0));
+        analysis_report.push("".to_string());
+        
+        // Weapon Preferences
+        if !player_features.player_mechanics.weapon_preference_patterns.is_empty() {
+            analysis_report.push("## Weapon Preferences".to_string());
+            for (weapon, preference) in &player_features.player_mechanics.weapon_preference_patterns {
+                analysis_report.push(format!("{}: {:.1}%", weapon, preference * 100.0));
+            }
+            analysis_report.push("".to_string());
+        }
+        
+        // Save individual player report
+        let report_path = output_dir.join(format!("player_{}_comprehensive_analysis.txt", player_id));
+        std::fs::write(report_path, analysis_report.join("\n"))?;
+    }
+
+    // Generate team summary
+    if features.len() >= 2 {
+        let mut team_summary = Vec::new();
+        team_summary.push("=== Team Performance Summary ===\n".to_string());
+        
+        // Calculate team averages
+        let avg_mechanics: f32 = features.values()
+            .map(|f| (f.player_mechanics.headshot_percentage + f.player_mechanics.flick_accuracy) / 2.0)
+            .sum::<f32>() / features.len() as f32;
+            
+        let avg_teamwork: f32 = features.values()
+            .map(|f| (f.team_dynamics.crossfire_setup_effectiveness + f.team_dynamics.trade_efficiency) / 2.0)
+            .sum::<f32>() / features.len() as f32;
+            
+        let avg_decision_quality: f32 = features.values()
+            .map(|f| (f.decision_metrics.decision_speed_after_first_contact + f.decision_metrics.reaction_consistency) / 2.0)
+            .sum::<f32>() / features.len() as f32;
+        
+        team_summary.push(format!("Team Size: {} players", features.len()));
+        team_summary.push(format!("Average Mechanical Skill: {:.1}%", avg_mechanics * 100.0));
+        team_summary.push(format!("Average Teamwork Quality: {:.1}%", avg_teamwork * 100.0));
+        team_summary.push(format!("Average Decision Making: {:.1}%", avg_decision_quality * 100.0));
+        
+        let team_summary_path = output_dir.join("team_summary.txt");
+        std::fs::write(team_summary_path, team_summary.join("\n"))?;
+    }
 
     Ok(())
 }
