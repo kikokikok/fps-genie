@@ -12,6 +12,9 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use tracing::info;
 
+mod enhanced_analyzer;
+use enhanced_analyzer::{analyze_demo_enhanced, AnalysisConfig, EnhancedAnalysisResult};
+
 /// CS2 Demo Analyzer - Visualize and analyze CS2 demo files
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -31,6 +34,32 @@ enum Commands {
         /// Output directory for analysis results
         #[arg(short, long)]
         output_dir: Option<PathBuf>,
+    },
+    /// Enhanced analysis with MLMOVE/CSKNOW integration
+    AnalyzeEnhanced {
+        /// Path to the parquet file containing behavioral vectors
+        #[arg(short, long)]
+        parquet: PathBuf,
+
+        /// Output directory for enhanced analysis results
+        #[arg(short, long)]
+        output_dir: Option<PathBuf>,
+
+        /// Map name for analysis
+        #[arg(short, long, default_value = "de_dust2")]
+        map: String,
+
+        /// Enable pro gap analysis
+        #[arg(long, default_value = "true")]
+        enable_pro_gap: bool,
+
+        /// Enable movement predictions
+        #[arg(long, default_value = "true")]
+        enable_movement: bool,
+
+        /// Number of movement analysis points
+        #[arg(long, default_value = "50")]
+        movement_points: usize,
     },
     /// Compare multiple players across demo files
     Compare {
@@ -142,6 +171,74 @@ fn main() -> Result<()> {
                 "Comprehensive analysis complete. Results saved to {}",
                 output_dir.display()
             );
+        }
+        Commands::AnalyzeEnhanced {
+            parquet,
+            output_dir,
+            map,
+            enable_pro_gap,
+            enable_movement,
+            movement_points,
+        } => {
+            info!("Running enhanced analysis with MLMOVE/CSKNOW integration on: {}", parquet.display());
+
+            // Load behavioral vectors from parquet
+            let df = ParquetReader::new(std::fs::File::open(&parquet)?).finish()?;
+            let vectors = parquet_to_vectors(&df)?;
+            info!("Loaded {} behavioral vectors", vectors.len());
+
+            // Create analysis configuration
+            let config = AnalysisConfig {
+                enable_pro_gap_analysis: enable_pro_gap,
+                enable_style_classification: true,
+                enable_team_analysis: true,
+                enable_decision_analysis: true,
+                enable_movement_predictions: enable_movement,
+                movement_analysis_points: movement_points,
+                map_name: map.clone(),
+                movement_sampling_interval: 128,
+            };
+
+            // Run enhanced analysis
+            let analysis_result = analyze_demo_enhanced(&vectors, Some(config))?;
+            
+            // Determine output directory
+            let output_dir = output_dir.unwrap_or_else(|| {
+                let mut dir = PathBuf::from("enhanced_analysis_results");
+                if let Some(stem) = parquet.file_stem() {
+                    dir.push(stem);
+                }
+                dir
+            });
+
+            // Create output directory
+            std::fs::create_dir_all(&output_dir)?;
+
+            // Save comprehensive results
+            save_enhanced_analysis_results(&analysis_result, &output_dir)?;
+
+            info!(
+                "Enhanced analysis complete! Performance metrics:",
+            );
+            info!("  Total analysis time: {:.2}ms", analysis_result.performance_metrics.total_time_ms);
+            info!("  Feature extraction: {:.2}ms", analysis_result.performance_metrics.feature_extraction_ms);
+            info!("  Pro gap analysis: {:.2}ms", analysis_result.performance_metrics.pro_gap_analysis_ms);
+            info!("  ML inference: {:.2}ms", analysis_result.performance_metrics.ml_inference_ms);
+            info!("  MLMOVE predictions: {:.2}ms", analysis_result.performance_metrics.mlmove_predictions_ms);
+            info!("  Results saved to: {}", output_dir.display());
+            
+            // Print key insights
+            info!("Key insights:");
+            info!("  Player style: {} (confidence: {:.1}%)", 
+                analysis_result.style_prediction.primary_style,
+                analysis_result.style_prediction.confidence * 100.0
+            );
+            info!("  Pro gap (EMD): {:.3}", analysis_result.pro_gap_analysis.overall_pro_gap);
+            info!("  Closest pro style: {} (confidence: {:.1}%)",
+                analysis_result.pro_gap_analysis.closest_pro_style,
+                analysis_result.pro_gap_analysis.style_match_confidence * 100.0
+            );
+            info!("  Movement predictions analyzed: {} points", analysis_result.movement_predictions.len());
         }
         Commands::Compare {
             parquet_files,
@@ -552,5 +649,211 @@ fn generate_comprehensive_feature_analysis(features: &HashMap<u64, ExtractedFeat
         std::fs::write(team_summary_path, team_summary.join("\n"))?;
     }
 
+    Ok(())
+}
+
+/// Convert parquet DataFrame to BehavioralVector
+fn parquet_to_vectors(df: &DataFrame) -> Result<Vec<BehavioralVector>> {
+    let mut vectors = Vec::new();
+    
+    // Extract columns from the DataFrame
+    let tick_col = df.column("tick")?.u32()?;
+    let steamid_col = df.column("steamid")?.u64()?;
+    let health_col = df.column("health")?.f32()?;
+    let armor_col = df.column("armor")?.f32()?;
+    let pos_x_col = df.column("pos_x")?.f32()?;
+    let pos_y_col = df.column("pos_y")?.f32()?;
+    let pos_z_col = df.column("pos_z")?.f32()?;
+    let vel_x_col = df.column("vel_x")?.f32()?;
+    let vel_y_col = df.column("vel_y")?.f32()?;
+    let vel_z_col = df.column("vel_z")?.f32()?;
+    let yaw_col = df.column("yaw")?.f32()?;
+    let pitch_col = df.column("pitch")?.f32()?;
+    let weapon_id_col = df.column("weapon_id")?.u16()?;
+    let ammo_col = df.column("ammo")?.f32()?;
+    let is_airborne_col = df.column("is_airborne")?.f32()?;
+    let delta_yaw_col = df.column("delta_yaw")?.f32()?;
+    let delta_pitch_col = df.column("delta_pitch")?.f32()?;
+
+    // Convert each row to BehavioralVector
+    for i in 0..df.height() {
+        let vector = BehavioralVector {
+            tick: tick_col.get(i).unwrap_or(0),
+            steamid: steamid_col.get(i).unwrap_or(0),
+            health: health_col.get(i).unwrap_or(0.0),
+            armor: armor_col.get(i).unwrap_or(0.0),
+            pos_x: pos_x_col.get(i).unwrap_or(0.0),
+            pos_y: pos_y_col.get(i).unwrap_or(0.0),
+            pos_z: pos_z_col.get(i).unwrap_or(0.0),
+            vel_x: vel_x_col.get(i).unwrap_or(0.0),
+            vel_y: vel_y_col.get(i).unwrap_or(0.0),
+            vel_z: vel_z_col.get(i).unwrap_or(0.0),
+            yaw: yaw_col.get(i).unwrap_or(0.0),
+            pitch: pitch_col.get(i).unwrap_or(0.0),
+            weapon_id: weapon_id_col.get(i).unwrap_or(0),
+            ammo: ammo_col.get(i).unwrap_or(0.0),
+            is_airborne: is_airborne_col.get(i).unwrap_or(0.0),
+            delta_yaw: delta_yaw_col.get(i).unwrap_or(0.0),
+            delta_pitch: delta_pitch_col.get(i).unwrap_or(0.0),
+        };
+        vectors.push(vector);
+    }
+
+    Ok(vectors)
+}
+
+/// Save enhanced analysis results to files
+fn save_enhanced_analysis_results(result: &EnhancedAnalysisResult, output_dir: &Path) -> Result<()> {
+    // Save comprehensive JSON result
+    let json_result = serde_json::to_string_pretty(result)?;
+    let json_path = output_dir.join("enhanced_analysis.json");
+    std::fs::write(json_path, json_result)?;
+
+    // Save human-readable report
+    let mut report = Vec::new();
+    
+    report.push("# Enhanced CS2 Demo Analysis Report".to_string());
+    report.push("## MLMOVE/CSKNOW Integration Results".to_string());
+    report.push("".to_string());
+
+    // Performance metrics
+    report.push("## Performance Metrics".to_string());
+    report.push(format!("Total Analysis Time: {:.2} ms", result.performance_metrics.total_time_ms));
+    report.push(format!("Feature Extraction: {:.2} ms", result.performance_metrics.feature_extraction_ms));
+    report.push(format!("Pro Gap Analysis: {:.2} ms", result.performance_metrics.pro_gap_analysis_ms));
+    report.push(format!("ML Inference: {:.2} ms", result.performance_metrics.ml_inference_ms));
+    report.push(format!("MLMOVE Predictions: {:.2} ms", result.performance_metrics.mlmove_predictions_ms));
+    report.push("".to_string());
+
+    // Pro gap analysis
+    report.push("## Professional Player Comparison".to_string());
+    report.push(format!("Overall Pro Gap (EMD): {:.3}", result.pro_gap_analysis.overall_pro_gap));
+    report.push(format!("Closest Professional Style: {}", result.pro_gap_analysis.closest_pro_style));
+    report.push(format!("Style Match Confidence: {:.1}%", result.pro_gap_analysis.style_match_confidence * 100.0));
+    report.push("".to_string());
+
+    // Feature gaps
+    report.push("### Detailed Feature Gaps vs Professionals".to_string());
+    report.push(format!("Aim Gap: {:.3}", result.pro_gap_analysis.feature_gaps.aim_gap));
+    report.push(format!("Movement Gap: {:.3}", result.pro_gap_analysis.feature_gaps.movement_gap));
+    report.push(format!("Decision Gap: {:.3}", result.pro_gap_analysis.feature_gaps.decision_gap));
+    report.push(format!("Positioning Gap: {:.3}", result.pro_gap_analysis.feature_gaps.positioning_gap));
+    report.push(format!("Utility Gap: {:.3}", result.pro_gap_analysis.feature_gaps.utility_gap));
+    report.push("".to_string());
+
+    // Improvement recommendations
+    if !result.pro_gap_analysis.improvement_recommendations.is_empty() {
+        report.push("### Improvement Recommendations".to_string());
+        for (i, recommendation) in result.pro_gap_analysis.improvement_recommendations.iter().enumerate() {
+            report.push(format!("{}. {}", i + 1, recommendation));
+        }
+        report.push("".to_string());
+    }
+
+    // Player style prediction
+    report.push("## ML-Based Player Style Classification".to_string());
+    report.push(format!("Primary Style: {}", result.style_prediction.primary_style));
+    report.push(format!("Confidence: {:.1}%", result.style_prediction.confidence * 100.0));
+    report.push("".to_string());
+
+    report.push("### Style Probability Distribution".to_string());
+    for (style, probability) in &result.style_prediction.style_probabilities {
+        report.push(format!("{}: {:.1}%", style, probability * 100.0));
+    }
+    report.push("".to_string());
+
+    // Team dynamics
+    report.push("## Team Dynamics Analysis".to_string());
+    report.push(format!("Coordination Score: {:.1}%", result.team_dynamics.coordination_score * 100.0));
+    report.push(format!("Tactical Cohesion: {:.1}%", result.team_dynamics.tactical_cohesion * 100.0));
+    report.push(format!("Communication Effectiveness: {:.1}%", result.team_dynamics.communication_effectiveness * 100.0));
+    report.push(format!("Role Distribution Balance: {:.1}%", result.team_dynamics.role_distribution_balance * 100.0));
+    report.push("".to_string());
+
+    // Decision quality
+    report.push("## Decision Quality Analysis".to_string());
+    report.push(format!("Overall Decision Quality: {:.1}%", result.decision_quality.overall_quality * 100.0));
+    report.push(format!("Quality Trend: {:.3}", result.decision_quality.quality_trend));
+    report.push(format!("Peak Decision Moments: {}", result.decision_quality.peak_decision_moments.len()));
+    
+    if !result.decision_quality.improvement_areas.is_empty() {
+        report.push("### Areas for Improvement".to_string());
+        for area in &result.decision_quality.improvement_areas {
+            report.push(format!("- {}", area));
+        }
+    }
+    report.push("".to_string());
+
+    // Movement predictions
+    if !result.movement_predictions.is_empty() {
+        report.push("## MLMOVE Movement Analysis".to_string());
+        report.push(format!("Total Movement Predictions: {}", result.movement_predictions.len()));
+        
+        let avg_inference_time: f32 = result.movement_predictions
+            .iter()
+            .map(|p| p.prediction.inference_time_ms)
+            .sum::<f32>() / result.movement_predictions.len() as f32;
+        
+        let avg_confidence: f32 = result.movement_predictions
+            .iter()
+            .map(|p| p.prediction.confidence)
+            .sum::<f32>() / result.movement_predictions.len() as f32;
+
+        let avg_similarity: f32 = result.movement_predictions
+            .iter()
+            .map(|p| p.actual_vs_predicted.similarity_score)
+            .sum::<f32>() / result.movement_predictions.len() as f32;
+
+        let top_k_accuracy = result.movement_predictions
+            .iter()
+            .filter(|p| p.actual_vs_predicted.in_top_k)
+            .count() as f32 / result.movement_predictions.len() as f32;
+
+        report.push(format!("Average Inference Time: {:.2} ms", avg_inference_time));
+        report.push(format!("Average Prediction Confidence: {:.1}%", avg_confidence * 100.0));
+        report.push(format!("Average Similarity to Actual: {:.1}%", avg_similarity * 100.0));
+        report.push(format!("Top-5 Accuracy: {:.1}%", top_k_accuracy * 100.0));
+        report.push("".to_string());
+    }
+
+    // Save the report
+    let report_path = output_dir.join("enhanced_analysis_report.md");
+    std::fs::write(report_path, report.join("\n"))?;
+
+    // Save movement predictions as CSV if available
+    if !result.movement_predictions.is_empty() {
+        save_movement_predictions_csv(&result.movement_predictions, output_dir)?;
+    }
+
+    Ok(())
+}
+
+/// Save movement predictions as CSV for further analysis
+fn save_movement_predictions_csv(predictions: &[enhanced_analyzer::MovementAnalysis], output_dir: &Path) -> Result<()> {
+    let csv_path = output_dir.join("movement_predictions.csv");
+    let mut csv_content = Vec::new();
+    
+    // CSV header
+    csv_content.push("tick,predicted_direction,predicted_speed,predicted_jump,confidence,similarity_score,in_top_k,actual_rank,map_area,player_health".to_string());
+    
+    // CSV data
+    for analysis in predictions {
+        let line = format!(
+            "{},{},{},{},{:.3},{:.3},{},{},{},{}",
+            analysis.tick,
+            analysis.prediction.action.direction,
+            analysis.prediction.action.speed,
+            analysis.prediction.action.jump,
+            analysis.prediction.confidence,
+            analysis.actual_vs_predicted.similarity_score,
+            analysis.actual_vs_predicted.in_top_k,
+            analysis.actual_vs_predicted.actual_action_rank,
+            analysis.context.map_area,
+            analysis.context.player_health
+        );
+        csv_content.push(line);
+    }
+    
+    std::fs::write(csv_path, csv_content.join("\n"))?;
     Ok(())
 }
