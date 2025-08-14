@@ -48,6 +48,7 @@ impl PostgresManager {
         Ok(())
     }
 
+    #[allow(dead_code)]
     async fn exec(&self, sql: &str) -> Result<()> {
         sqlx::query(sql).execute(&self.pool).await?;
         Ok(())

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tempfile::TempDir;
 use tokio::fs;
 
@@ -41,7 +41,7 @@ mod pipeline_tests {
         Ok((temp_dir, config, db))
     }
 
-    async fn create_mock_demo_file(demo_dir: &PathBuf, filename: &str) -> Result<PathBuf> {
+    async fn create_mock_demo_file(demo_dir: &Path, filename: &str) -> Result<PathBuf> {
         let demo_path = demo_dir.join(filename);
         // Create a mock demo file with some binary content
         let mock_content = vec![0u8; 1024]; // 1KB of zeros as mock demo data
@@ -63,7 +63,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_demo_discovery() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create some mock demo files
@@ -95,7 +95,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_demo_registration() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create a mock demo file
@@ -132,13 +132,13 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_demo_registration_simple_filename() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create a demo with simple filename
         let demo_path = create_mock_demo_file(&config.demo_directory, "simple_demo.dem").await?;
 
-        let match_id = processor.register_demo(&demo_path).await?;
+        let _match_id = processor.register_demo(&demo_path).await?;
 
         let pending_matches = processor.db().postgres.get_unprocessed_matches().await?;
         let registered_match = pending_matches
@@ -158,7 +158,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_pipeline_workflow_with_mock_data() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create multiple demo files
@@ -221,12 +221,12 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_match_status_updates() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create and register a demo
         let demo_path = create_mock_demo_file(&config.demo_directory, "status_test.dem").await?;
-        let match_id = processor.register_demo(&demo_path).await?;
+        let _match_id = processor.register_demo(&demo_path).await?;
 
         // Test status progression: Pending -> Processing -> Completed
         processor
@@ -263,7 +263,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_duplicate_demo_registration() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         let demo_path = create_mock_demo_file(&config.demo_directory, "duplicate_test.dem").await?;
@@ -293,7 +293,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_error_handling_invalid_demo_path() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         let non_existent_path = config.demo_directory.join("does_not_exist.dem");
@@ -308,7 +308,7 @@ mod pipeline_tests {
 
     #[tokio::test]
     async fn test_pipeline_performance_simulation() -> Result<()> {
-        let (temp_dir, config, db) = setup_test_environment().await?;
+        let (_temp_dir, config, db) = setup_test_environment().await?;
         let processor = DemoProcessor::new(db, config.clone());
 
         // Create multiple demo files to test concurrent processing capability

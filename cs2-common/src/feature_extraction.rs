@@ -247,7 +247,7 @@ impl PlayerMechanicsExtractor {
         features: &mut PlayerMechanicsFeatures,
         vectors: &[BehavioralVector],
     ) {
-        let mut total_velocity_changes = 0.0;
+        let mut _total_velocity_changes = 0.0;
         let mut strafe_events = 0;
         let mut total_efficiency = 0.0;
         let mut air_time_ticks = 0;
@@ -261,7 +261,7 @@ impl PlayerMechanicsExtractor {
             let vel_change = ((next.vel_x - current.vel_x).powi(2)
                 + (next.vel_y - current.vel_y).powi(2))
             .sqrt();
-            total_velocity_changes += vel_change;
+            _total_velocity_changes += vel_change;
 
             // Detect strafing patterns
             if current.vel_x.abs() > 100.0 || current.vel_y.abs() > 100.0 {
