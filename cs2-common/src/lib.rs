@@ -1,4 +1,15 @@
+pub mod feature_extraction;
 pub mod parsing_features;
+pub mod team_decision_extraction;
+pub mod temporal_extraction;
+
+// Re-export extractors for easy access
+pub use feature_extraction::{
+    DecisionMetricsFeatures, ExtractedFeatures, PlayerMechanicsExtractor, PlayerMechanicsFeatures,
+    TeamDynamicsFeatures, TemporalContextFeatures,
+};
+pub use team_decision_extraction::{DecisionMetricsExtractor, TeamDynamicsExtractor};
+pub use temporal_extraction::TemporalContextExtractor;
 
 use bytemuck::{Pod, Zeroable};
 use serde::{Deserialize, Serialize};

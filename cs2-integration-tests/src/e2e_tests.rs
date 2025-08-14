@@ -16,7 +16,7 @@ mod e2e_pipeline_tests {
         let processor = infra.create_demo_processor().await?;
 
         // Setup test demos
-        let _demo_files = infra.setup_test_data(&processor).await?;
+        infra.setup_test_data(&processor).await?;
         info!("📁 Set up test demo files");
 
         // Test 1: Demo discovery and registration
