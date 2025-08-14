@@ -85,13 +85,13 @@ impl BehaviorNet {
 
     pub fn save(&self, path: &str) -> Result<()> {
         // TODO: Implement model saving with Candle
-        println!("Model saving to {} - implementation in progress", path);
+        println!("Model saving to {path} - implementation in progress");
         Ok(())
     }
 
     pub fn load(path: &str, input_dim: usize, output_dim: usize, device: Device) -> Result<Self> {
         // TODO: Implement model loading with Candle
-        println!("Model loading from {} - implementation in progress", path);
+        println!("Model loading from {path} - implementation in progress");
         Self::new(input_dim, output_dim, device)
     }
 }

@@ -132,7 +132,7 @@ pub struct PlayerMechanicsExtractor {
 impl Default for PlayerMechanicsExtractor {
     fn default() -> Self {
         Self {
-            headshot_threshold: 30.0, // degrees for headshot angle tolerance
+            headshot_threshold: 30.0,       // degrees for headshot angle tolerance
             flick_distance_threshold: 45.0, // degrees for significant flick
             movement_smoothness_window: 10, // ticks for smoothness analysis
         }
@@ -176,17 +176,21 @@ impl PlayerMechanicsExtractor {
 
         // Calculate aim precision metrics
         self.extract_aim_precision(&mut features, vectors);
-        
+
         // Calculate movement metrics
         self.extract_movement_metrics(&mut features, vectors);
-        
+
         // Calculate weapon control metrics
         self.extract_weapon_control(&mut features, vectors);
 
         features
     }
 
-    fn extract_aim_precision(&self, features: &mut PlayerMechanicsFeatures, vectors: &[BehavioralVector]) {
+    fn extract_aim_precision(
+        &self,
+        features: &mut PlayerMechanicsFeatures,
+        vectors: &[BehavioralVector],
+    ) {
         let mut total_yaw_changes: f32 = 0.0;
         let mut total_pitch_changes: f32 = 0.0;
         let mut flick_count = 0;
@@ -218,7 +222,8 @@ impl PlayerMechanicsExtractor {
 
         // Calculate averages and metrics
         if vectors.len() > 1 {
-            features.spray_control_deviation = (total_yaw_changes + total_pitch_changes) / (vectors.len() - 1) as f32;
+            features.spray_control_deviation =
+                (total_yaw_changes + total_pitch_changes) / (vectors.len() - 1) as f32;
         }
 
         if flick_count > 0 {
@@ -227,7 +232,8 @@ impl PlayerMechanicsExtractor {
         }
 
         if !crosshair_heights.is_empty() {
-            features.crosshair_placement_height = crosshair_heights.iter().sum::<f32>() / crosshair_heights.len() as f32;
+            features.crosshair_placement_height =
+                crosshair_heights.iter().sum::<f32>() / crosshair_heights.len() as f32;
         }
 
         // Simplified headshot percentage calculation (would need damage events in real implementation)
@@ -236,7 +242,11 @@ impl PlayerMechanicsExtractor {
         features.target_acquisition_time = 0.3; // Placeholder value in seconds
     }
 
-    fn extract_movement_metrics(&self, features: &mut PlayerMechanicsFeatures, vectors: &[BehavioralVector]) {
+    fn extract_movement_metrics(
+        &self,
+        features: &mut PlayerMechanicsFeatures,
+        vectors: &[BehavioralVector],
+    ) {
         let mut total_velocity_changes = 0.0;
         let mut strafe_events = 0;
         let mut total_efficiency = 0.0;
@@ -248,8 +258,9 @@ impl PlayerMechanicsExtractor {
             let next = &window[1];
 
             // Calculate velocity changes for movement efficiency
-            let vel_change = ((next.vel_x - current.vel_x).powi(2) + 
-                             (next.vel_y - current.vel_y).powi(2)).sqrt();
+            let vel_change = ((next.vel_x - current.vel_x).powi(2)
+                + (next.vel_y - current.vel_y).powi(2))
+            .sqrt();
             total_velocity_changes += vel_change;
 
             // Detect strafing patterns
@@ -273,7 +284,8 @@ impl PlayerMechanicsExtractor {
         // Calculate movement metrics
         if strafe_events > 0 {
             features.movement_efficiency = total_efficiency / strafe_events as f32;
-            features.counter_strafe_effectiveness = self.estimate_counter_strafe_effectiveness(vectors);
+            features.counter_strafe_effectiveness =
+                self.estimate_counter_strafe_effectiveness(vectors);
         }
 
         if air_time_ticks > 0 {
@@ -282,14 +294,18 @@ impl PlayerMechanicsExtractor {
 
         // Calculate position transition smoothness
         features.position_transition_smoothness = self.calculate_movement_smoothness(vectors);
-        
+
         // Usage patterns (simplified)
         features.crouch_usage_pattern = 0.1; // Placeholder
-        features.jump_usage_pattern = 0.05; // Placeholder  
+        features.jump_usage_pattern = 0.05; // Placeholder
         features.peek_technique_score = 0.7; // Placeholder
     }
 
-    fn extract_weapon_control(&self, features: &mut PlayerMechanicsFeatures, vectors: &[BehavioralVector]) {
+    fn extract_weapon_control(
+        &self,
+        features: &mut PlayerMechanicsFeatures,
+        vectors: &[BehavioralVector],
+    ) {
         let mut weapon_usage: HashMap<u16, usize> = HashMap::new();
         let mut recoil_consistency_sum = 0.0;
         let mut weapon_switches = 0;
@@ -325,22 +341,23 @@ impl PlayerMechanicsExtractor {
 
         // Calculate weapon control metrics
         if vectors.len() > 1 {
-            features.recoil_control_consistency = recoil_consistency_sum / (vectors.len() - 1) as f32;
+            features.recoil_control_consistency =
+                recoil_consistency_sum / (vectors.len() - 1) as f32;
             features.weapon_switch_speed = weapon_switches as f32 / vectors.len() as f32;
         }
 
         if burst_shots + spray_shots > 0 {
-            features.burst_vs_spray_preference = burst_shots as f32 / (burst_shots + spray_shots) as f32;
+            features.burst_vs_spray_preference =
+                burst_shots as f32 / (burst_shots + spray_shots) as f32;
         }
 
         // Convert weapon usage to preference patterns
         let total_usage: usize = weapon_usage.values().sum();
         for (weapon_id, usage) in weapon_usage {
             let weapon_name = self.weapon_id_to_name(weapon_id);
-            features.weapon_preference_patterns.insert(
-                weapon_name, 
-                usage as f32 / total_usage as f32
-            );
+            features
+                .weapon_preference_patterns
+                .insert(weapon_name, usage as f32 / total_usage as f32);
         }
 
         // Placeholder values for complex metrics
@@ -355,7 +372,7 @@ impl PlayerMechanicsExtractor {
         (velocity_magnitude / 320.0).min(1.0) // Normalize and cap at 1.0
     }
 
-    fn estimate_counter_strafe_effectiveness(&self, vectors: &[BehavioralVector]) -> f32 {
+    fn estimate_counter_strafe_effectiveness(&self, _vectors: &[BehavioralVector]) -> f32 {
         // Simplified counter-strafe detection
         // Would analyze velocity reduction patterns in real implementation
         0.8 // Placeholder value
@@ -371,18 +388,18 @@ impl PlayerMechanicsExtractor {
 
         for window in vectors.windows(self.movement_smoothness_window) {
             let mut acceleration_changes = 0.0;
-            
-            for i in 1..window.len()-1 {
-                let prev_vel = (window[i-1].vel_x.powi(2) + window[i-1].vel_y.powi(2)).sqrt();
+
+            for i in 1..window.len() - 1 {
+                let prev_vel = (window[i - 1].vel_x.powi(2) + window[i - 1].vel_y.powi(2)).sqrt();
                 let curr_vel = (window[i].vel_x.powi(2) + window[i].vel_y.powi(2)).sqrt();
-                let next_vel = (window[i+1].vel_x.powi(2) + window[i+1].vel_y.powi(2)).sqrt();
-                
+                let next_vel = (window[i + 1].vel_x.powi(2) + window[i + 1].vel_y.powi(2)).sqrt();
+
                 let prev_accel = curr_vel - prev_vel;
                 let curr_accel = next_vel - curr_vel;
-                
+
                 acceleration_changes += (curr_accel - prev_accel).abs();
             }
-            
+
             // Lower acceleration changes indicate smoother movement
             let smoothness = 1.0 / (1.0 + acceleration_changes / 100.0);
             smoothness_sum += smoothness;
@@ -396,13 +413,17 @@ impl PlayerMechanicsExtractor {
         }
     }
 
-    fn calculate_recoil_control_quality(&self, current: &BehavioralVector, next: &BehavioralVector) -> f32 {
+    fn calculate_recoil_control_quality(
+        &self,
+        current: &BehavioralVector,
+        next: &BehavioralVector,
+    ) -> f32 {
         // Simplified recoil control calculation
         // In real implementation, would compare aim adjustments to weapon recoil patterns
         let yaw_change = (next.yaw - current.yaw).abs();
         let pitch_change = (next.pitch - current.pitch).abs();
         let total_change = (yaw_change.powi(2) + pitch_change.powi(2)).sqrt();
-        
+
         // Good recoil control = moderate, consistent aim adjustments
         if total_change > 0.0 && total_change < 5.0 {
             1.0 - (total_change / 5.0)
@@ -418,7 +439,7 @@ impl PlayerMechanicsExtractor {
             16 => "M4A4".to_string(),
             60 => "M4A1-S".to_string(),
             40 => "AWP".to_string(),
-            _ => format!("weapon_{}", weapon_id),
+            _ => format!("weapon_{weapon_id}"),
         }
     }
 }
@@ -430,7 +451,7 @@ mod tests {
     #[test]
     fn test_player_mechanics_extractor() {
         let extractor = PlayerMechanicsExtractor::new();
-        
+
         // Create test vectors with some movement and aim data
         let vectors = vec![
             BehavioralVector {
@@ -474,7 +495,7 @@ mod tests {
         ];
 
         let features = extractor.extract_features(&vectors);
-        
+
         // Basic validation
         assert!(features.headshot_percentage >= 0.0);
         assert!(features.movement_efficiency >= 0.0);
@@ -486,7 +507,7 @@ mod tests {
     fn test_empty_vectors() {
         let extractor = PlayerMechanicsExtractor::new();
         let features = extractor.extract_features(&[]);
-        
+
         assert_eq!(features.headshot_percentage, 0.0);
         assert_eq!(features.movement_efficiency, 0.0);
     }
@@ -494,7 +515,7 @@ mod tests {
     #[test]
     fn test_movement_smoothness_calculation() {
         let extractor = PlayerMechanicsExtractor::new();
-        
+
         // Create vectors with smooth movement
         let smooth_vectors: Vec<BehavioralVector> = (0..20)
             .map(|i| BehavioralVector {
