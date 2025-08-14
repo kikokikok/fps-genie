@@ -1,17 +1,15 @@
 /// MLMOVE Transformer Architecture - Professional Movement Cloning
-/// 
+///
 /// Implements the 4-layer, 1-head, 256-d transformer from the MLMOVE research paper
 /// for 0.5ms/tick professional player movement prediction and behavior cloning.
-
 use anyhow::Result;
-use candle_core::{DType, Device, Tensor};
-use candle_nn::{embedding, linear, Linear, Module, VarBuilder, VarMap, Embedding};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use candle_core::{DType, Device, IndexOp, Tensor};
+use candle_nn::{embedding, linear, Embedding, Linear, Module, VarBuilder, VarMap};
 use cs2_common::BehavioralVector;
+use serde::{Deserialize, Serialize};
 
 /// MLMOVE Transformer Configuration
-/// 
+///
 /// Matches the research paper specifications:
 /// - 4 transformer layers
 /// - 1 attention head  
@@ -51,7 +49,7 @@ impl Default for MLMOVEConfig {
 }
 
 /// MLMOVE Transformer for professional movement prediction
-/// 
+///
 /// Implements the architecture from "Learning to Move Like Professional Counter-Strike Players"
 /// Optimized for real-time inference with 0.5ms per tick performance target
 #[derive(Debug)]
@@ -117,7 +115,7 @@ struct LayerNorm {
 }
 
 /// Discrete action space for CS2 movement
-/// 
+///
 /// Represents the 97-way discrete action space from the research:
 /// - Movement directions (8 directions)
 /// - Movement speeds (multiple levels)
@@ -161,17 +159,26 @@ impl MLMOVETransformer {
         let input_embedding = linear(config.input_dim, config.model_dim, vs.pp("input_embedding"))?;
 
         // Positional embedding
-        let position_embedding = embedding(config.sequence_length, config.model_dim, vs.pp("pos_embedding"))?;
+        let position_embedding = embedding(
+            config.sequence_length,
+            config.model_dim,
+            vs.pp("pos_embedding"),
+        )?;
 
         // Transformer layers
         let mut transformer_layers = Vec::new();
         for i in 0..config.num_layers {
-            let layer = TransformerLayer::new(config.model_dim, config.ff_dim, vs.pp(&format!("layer_{}", i)))?;
+            let layer = TransformerLayer::new(
+                config.model_dim,
+                config.ff_dim,
+                vs.pp(format!("layer_{i}")),
+            )?;
             transformer_layers.push(layer);
         }
 
         // Output projection to action space
-        let output_projection = linear(config.model_dim, config.action_space_size, vs.pp("output"))?;
+        let output_projection =
+            linear(config.model_dim, config.action_space_size, vs.pp("output"))?;
 
         Ok(Self {
             input_embedding,
@@ -184,7 +191,7 @@ impl MLMOVETransformer {
     }
 
     /// Load pre-trained MLMOVE weights from safetensors file
-    pub fn load_pretrained(model_path: &str, device: Device) -> Result<Self> {
+    pub fn load_pretrained(_model_path: &str, device: Device) -> Result<Self> {
         // TODO: Implement safetensors loading
         // For now, create a new model with default weights
         Self::new(device)
@@ -231,7 +238,8 @@ impl MLMOVETransformer {
 
         // Find best action
         let probs_vec = probabilities.to_vec1::<f32>()?;
-        let best_action_idx = probs_vec.iter()
+        let best_action_idx = probs_vec
+            .iter()
             .enumerate()
             .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap())
             .map(|(idx, _)| idx)
@@ -257,21 +265,21 @@ impl MLMOVETransformer {
 
         for i in 0..seq_len {
             let vector = &vectors[vectors.len() - seq_len + i];
-            
+
             // Extract relevant features for movement prediction
             let features = vec![
-                vector.pos_x / 1000.0,    // Normalize position
+                vector.pos_x / 1000.0, // Normalize position
                 vector.pos_y / 1000.0,
                 vector.pos_z / 100.0,
-                vector.vel_x / 320.0,     // Normalize by max speed
+                vector.vel_x / 320.0, // Normalize by max speed
                 vector.vel_y / 320.0,
                 vector.vel_z / 320.0,
-                vector.yaw / 360.0,       // Normalize angles
+                vector.yaw / 360.0, // Normalize angles
                 vector.pitch / 90.0,
-                vector.health / 100.0,    // Normalize health/armor
+                vector.health / 100.0, // Normalize health/armor
                 vector.armor / 100.0,
             ];
-            
+
             input_data.extend(features);
         }
 
@@ -283,7 +291,7 @@ impl MLMOVETransformer {
         let tensor = Tensor::from_slice(
             &input_data,
             (1, self.config.sequence_length, self.config.input_dim),
-            &self.device
+            &self.device,
         )?;
 
         Ok(tensor)
@@ -291,11 +299,15 @@ impl MLMOVETransformer {
 
     /// Simplified softmax implementation
     fn softmax(&self, input: &Tensor) -> Result<Tensor> {
-        let max_val = input.max(candle_core::D::Minus1)?.broadcast_as(input.shape())?;
+        let max_val = input
+            .max(candle_core::D::Minus1)?
+            .broadcast_as(input.shape())?;
         let shifted = input.sub(&max_val)?;
         let exp_vals = shifted.exp()?;
-        let sum_exp = exp_vals.sum(candle_core::D::Minus1)?.broadcast_as(input.shape())?;
-        exp_vals.div(&sum_exp)
+        let sum_exp = exp_vals
+            .sum(candle_core::D::Minus1)?
+            .broadcast_as(input.shape())?;
+        Ok(exp_vals.div(&sum_exp)?)
     }
 
     /// Convert action index to discrete action
@@ -303,14 +315,22 @@ impl MLMOVETransformer {
         // 97-way action space: 8 directions × 6 speeds × 2 jump states = 96, + 1 no-op
         if index == 96 {
             // No-op action
-            return DiscreteAction { direction: 8, speed: 0, jump: 0 };
+            return DiscreteAction {
+                direction: 8,
+                speed: 0,
+                jump: 0,
+            };
         }
 
         let direction = (index % 8) as u8;
         let speed = ((index / 8) % 6) as u8;
         let jump = (index / 48) as u8;
 
-        DiscreteAction { direction, speed, jump }
+        DiscreteAction {
+            direction,
+            speed,
+            jump,
+        }
     }
 
     /// Convert discrete action to CS2 movement commands
@@ -333,12 +353,12 @@ impl MLMOVETransformer {
         };
 
         let speed_multiplier = match action.speed {
-            0 => 0.0,   // No movement
-            1 => 0.3,   // Slow walk
-            2 => 0.6,   // Walk
-            3 => 0.8,   // Fast walk
-            4 => 1.0,   // Run
-            5 => 1.0,   // Sprint (same as run in CS2)
+            0 => 0.0, // No movement
+            1 => 0.3, // Slow walk
+            2 => 0.6, // Walk
+            3 => 0.8, // Fast walk
+            4 => 1.0, // Run
+            5 => 1.0, // Sprint (same as run in CS2)
             _ => 0.0,
         };
 
@@ -413,10 +433,15 @@ impl SelfAttention {
 
         // Single-head attention (as per MLMOVE paper)
         let scores = queries.matmul(&keys.transpose(1, 2)?)?;
-        let scaled_scores = scores.div(&Tensor::new((self.model_dim as f32).sqrt(), input.device())?)?;
+        let scaled_scores = scores.div(&Tensor::new(
+            (self.model_dim as f32).sqrt(),
+            input.device(),
+        )?)?;
 
         // Simplified attention weights (using max normalization instead of softmax)
-        let max_scores = scaled_scores.max(candle_core::D::Minus1)?.broadcast_as(scaled_scores.shape())?;
+        let max_scores = scaled_scores
+            .max(candle_core::D::Minus1)?
+            .broadcast_as(scaled_scores.shape())?;
         let attention_weights = (scaled_scores - max_scores)?.exp()?;
 
         let attended = attention_weights.matmul(&values)?;
@@ -452,13 +477,15 @@ impl LayerNorm {
 
     fn forward(&self, input: &Tensor) -> Result<Tensor> {
         // Simplified layer normalization
-        let mean = input.mean(candle_core::D::Minus1)?.broadcast_as(input.shape())?;
+        let mean = input
+            .mean(candle_core::D::Minus1)?
+            .broadcast_as(input.shape())?;
         let centered = input.sub(&mean)?;
-        
+
         // Apply learned scaling and bias
         let scaled = self.weight.forward(&centered)?;
         let output = self.bias.forward(&scaled)?;
-        
+
         Ok(output)
     }
 }
@@ -479,7 +506,7 @@ mod tests {
     #[test]
     fn test_discrete_action_conversion() -> Result<()> {
         let transformer = MLMOVETransformer::new(Device::Cpu)?;
-        
+
         // Test action index to discrete action conversion
         let action = transformer.index_to_action(0);
         assert_eq!(action.direction, 0);
@@ -492,84 +519,84 @@ mod tests {
             speed: 4,     // Run
             jump: 1,      // Jump
         });
-        
+
         assert_eq!(commands.forward_move, 1.0);
         assert_eq!(commands.side_move, 0.0);
         assert!(commands.jump);
-        
+
         Ok(())
     }
 
     #[test]
     fn test_behavioral_vector_conversion() -> Result<()> {
         let transformer = MLMOVETransformer::new(Device::Cpu)?;
-        
-        let vectors = vec![
-            BehavioralVector {
-                tick: 1,
-                steamid: 123456789,
-                health: 100.0,
-                armor: 100.0,
-                pos_x: 100.0,
-                pos_y: 200.0,
-                pos_z: 64.0,
-                vel_x: 250.0,
-                vel_y: 0.0,
-                vel_z: 0.0,
-                yaw: 90.0,
-                pitch: 0.0,
-                weapon_id: 7,
-                ammo: 30.0,
-                is_airborne: 0.0,
-                delta_yaw: 0.0,
-                delta_pitch: 0.0,
-            }
-        ];
 
-        let tensor = transformer.behavioral_vectors_to_tensor(&vectors)?;
-        assert_eq!(tensor.shape().dims(), &[1, 32, 10]); // batch, seq_len, features
-        
-        Ok(())
-    }
-
-    #[test]
-    fn test_movement_prediction() -> Result<()> {
-        let transformer = MLMOVETransformer::new(Device::Cpu)?;
-        
-        // Create sequence of behavioral vectors
-        let vectors: Vec<BehavioralVector> = (0..10).map(|i| BehavioralVector {
-            tick: i,
+        let vectors = vec![BehavioralVector {
+            tick: 1,
             steamid: 123456789,
             health: 100.0,
             armor: 100.0,
-            pos_x: i as f32 * 10.0,
-            pos_y: 0.0,
+            pos_x: 100.0,
+            pos_y: 200.0,
             pos_z: 64.0,
             vel_x: 250.0,
             vel_y: 0.0,
             vel_z: 0.0,
-            yaw: 0.0,
+            yaw: 90.0,
             pitch: 0.0,
             weapon_id: 7,
             ammo: 30.0,
             is_airborne: 0.0,
             delta_yaw: 0.0,
             delta_pitch: 0.0,
-        }).collect();
+        }];
+
+        let tensor = transformer.behavioral_vectors_to_tensor(&vectors)?;
+        assert_eq!(tensor.shape().dims(), &[1, 32, 10]); // batch, seq_len, features
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_movement_prediction() -> Result<()> {
+        let transformer = MLMOVETransformer::new(Device::Cpu)?;
+
+        // Create sequence of behavioral vectors
+        let vectors: Vec<BehavioralVector> = (0..10)
+            .map(|i| BehavioralVector {
+                tick: i,
+                steamid: 123456789,
+                health: 100.0,
+                armor: 100.0,
+                pos_x: i as f32 * 10.0,
+                pos_y: 0.0,
+                pos_z: 64.0,
+                vel_x: 250.0,
+                vel_y: 0.0,
+                vel_z: 0.0,
+                yaw: 0.0,
+                pitch: 0.0,
+                weapon_id: 7,
+                ammo: 30.0,
+                is_airborne: 0.0,
+                delta_yaw: 0.0,
+                delta_pitch: 0.0,
+            })
+            .collect();
 
         let prediction = transformer.predict_movement(&vectors)?;
-        
+
         assert!(prediction.confidence >= 0.0 && prediction.confidence <= 1.0);
         assert_eq!(prediction.action_probabilities.len(), 97);
         assert!(prediction.inference_time_ms >= 0.0);
-        
+
         Ok(())
     }
 
     #[test]
     fn test_action_space_coverage() -> Result<()> {
         let transformer = MLMOVETransformer::new(Device::Cpu)?;
-        
+
         // Test that we can represent all 97 actions
         for i in 0..97 {
             let action = transformer.index_to_action(i);
@@ -582,20 +609,20 @@ mod tests {
                 assert!(action.jump < 2);
             }
         }
-        
+
         Ok(())
     }
 
     #[test]
     fn test_transformer_forward_pass() -> Result<()> {
         let transformer = MLMOVETransformer::new(Device::Cpu)?;
-        
+
         // Create dummy input tensor
         let input = Tensor::zeros((1, 32, 10), DType::F32, &Device::Cpu)?;
         let output = transformer.forward(&input)?;
-        
+
         assert_eq!(output.shape().dims(), &[1, 97]); // batch, action_space
-        
+
         Ok(())
     }
 }

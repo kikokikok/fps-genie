@@ -1,19 +1,17 @@
 /// Enhanced Demo Analyzer - MLMOVE/CSKNOW Integration
-/// 
+///
 /// Integrates pro similarity scoring, micro-bot inference, and comprehensive
 /// analytics into the existing demo analysis pipeline.
-
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Instant;
 
-use cs2_common::{BehavioralVector, feature_extraction::*};
-use cs2_analytics::{ProReferenceDataset, ProGapAnalysis, EarthMoverDistanceCalculator};
+use cs2_analytics::{EarthMoverDistanceCalculator, ProGapAnalysis, ProReferenceDataset};
+use cs2_common::{feature_extraction::*, BehavioralVector};
 use cs2_ml::{
-    MLMOVETransformer, MovementPrediction, PlayerStyleClassifier, 
-    TeamDynamicsTransformer, DecisionQualityRNN, PlayerStylePrediction,
-    TeamDynamicsAnalysis, DecisionQualityAnalysis,
+    DecisionQualityAnalysis, DecisionQualityRNN, MLMOVETransformer, MovementPrediction,
+    PlayerStyleClassifier, PlayerStylePrediction, TeamDynamicsAnalysis, TeamDynamicsTransformer,
 };
 
 /// Enhanced analysis result with MLMOVE/CSKNOW integration
@@ -151,17 +149,17 @@ impl EnhancedDemoAnalyzer {
     /// Create new enhanced demo analyzer
     pub fn new(config: AnalysisConfig) -> Result<Self> {
         let device = candle_core::Device::Cpu;
-        
+
         // Load pro reference dataset
         let pro_dataset = ProReferenceDataset::load_csknow_dataset()?;
         let emd_calculator = EarthMoverDistanceCalculator::new();
-        
+
         // Initialize ML models
         let style_classifier = PlayerStyleClassifier::new(18, 6, 5, device.clone())?;
         let team_transformer = TeamDynamicsTransformer::new(16, 8, 4, device.clone())?;
         let decision_rnn = DecisionQualityRNN::new(10, 5, 32, device.clone())?;
         let mlmove_transformer = MLMOVETransformer::new(device.clone())?;
-        
+
         // Initialize feature extractors
         let mechanics_extractor = PlayerMechanicsExtractor::new();
 
@@ -197,7 +195,9 @@ impl EnhancedDemoAnalyzer {
         // Step 2: Pro gap analysis using CSKNOW
         let pro_gap_analysis = if self.config.enable_pro_gap_analysis {
             let pro_start = Instant::now();
-            let analysis = self.pro_dataset.analyze_pro_gap(&feature_analysis, &self.config.map_name)?;
+            let analysis = self
+                .pro_dataset
+                .analyze_pro_gap(&feature_analysis, &self.config.map_name)?;
             performance_metrics.pro_gap_analysis_ms = pro_start.elapsed().as_secs_f32() * 1000.0;
             analysis
         } else {
@@ -219,14 +219,16 @@ impl EnhancedDemoAnalyzer {
 
         // Step 3: ML-based analysis
         let ml_start = Instant::now();
-        let (style_prediction, team_dynamics, decision_quality) = self.run_ml_analysis(&feature_analysis, vectors)?;
+        let (style_prediction, team_dynamics, decision_quality) =
+            self.run_ml_analysis(&feature_analysis, vectors)?;
         performance_metrics.ml_inference_ms = ml_start.elapsed().as_secs_f32() * 1000.0;
 
         // Step 4: MLMOVE movement predictions
         let movement_predictions = if self.config.enable_movement_predictions {
             let mlmove_start = Instant::now();
             let predictions = self.analyze_movement_patterns(vectors)?;
-            performance_metrics.mlmove_predictions_ms = mlmove_start.elapsed().as_secs_f32() * 1000.0;
+            performance_metrics.mlmove_predictions_ms =
+                mlmove_start.elapsed().as_secs_f32() * 1000.0;
             predictions
         } else {
             Vec::new()
@@ -246,19 +248,29 @@ impl EnhancedDemoAnalyzer {
     }
 
     /// Extract comprehensive features from behavioral vectors
-    fn extract_comprehensive_features(&self, vectors: &[BehavioralVector]) -> Result<ExtractedFeatures> {
+    fn extract_comprehensive_features(
+        &self,
+        vectors: &[BehavioralVector],
+    ) -> Result<ExtractedFeatures> {
         // Group vectors by player
         let mut player_vectors: HashMap<u64, Vec<BehavioralVector>> = HashMap::new();
         for vector in vectors {
-            player_vectors.entry(vector.steamid).or_default().push(vector.clone());
+            player_vectors
+                .entry(vector.steamid)
+                .or_default()
+                .push(vector.clone());
         }
 
         // For this demo, analyze the first player
-        let first_player_vectors = player_vectors.values().next()
+        let first_player_vectors = player_vectors
+            .values()
+            .next()
             .ok_or_else(|| anyhow::anyhow!("No player data found"))?;
 
         // Extract player mechanics features
-        let player_mechanics = self.mechanics_extractor.extract_features(first_player_vectors);
+        let player_mechanics = self
+            .mechanics_extractor
+            .extract_features(first_player_vectors);
 
         // Create placeholder team dynamics (would aggregate from all players)
         let team_dynamics = TeamDynamicsFeatures {
@@ -332,8 +344,11 @@ impl EnhancedDemoAnalyzer {
         &self,
         features: &ExtractedFeatures,
         vectors: &[BehavioralVector],
-    ) -> Result<(PlayerStylePrediction, TeamDynamicsAnalysis, DecisionQualityAnalysis)> {
-        
+    ) -> Result<(
+        PlayerStylePrediction,
+        TeamDynamicsAnalysis,
+        DecisionQualityAnalysis,
+    )> {
         // Player style classification
         let style_prediction = if self.config.enable_style_classification {
             self.style_classifier.classify_player_style(features)?
@@ -349,7 +364,8 @@ impl EnhancedDemoAnalyzer {
         let team_dynamics = if self.config.enable_team_analysis {
             let mut team_features = HashMap::new();
             team_features.insert(vectors[0].steamid, features.clone());
-            self.team_transformer.analyze_team_dynamics(&team_features)?
+            self.team_transformer
+                .analyze_team_dynamics(&team_features)?
         } else {
             TeamDynamicsAnalysis::default()
         };
@@ -361,8 +377,9 @@ impl EnhancedDemoAnalyzer {
                 .chunks(32) // Group into decision windows
                 .map(|_chunk| features.decision_metrics.clone())
                 .collect();
-            
-            self.decision_rnn.evaluate_decision_quality(&decision_sequence)?
+
+            self.decision_rnn
+                .evaluate_decision_quality(&decision_sequence)?
         } else {
             DecisionQualityAnalysis::default()
         };
@@ -371,7 +388,10 @@ impl EnhancedDemoAnalyzer {
     }
 
     /// Analyze movement patterns using MLMOVE transformer
-    fn analyze_movement_patterns(&self, vectors: &[BehavioralVector]) -> Result<Vec<MovementAnalysis>> {
+    fn analyze_movement_patterns(
+        &self,
+        vectors: &[BehavioralVector],
+    ) -> Result<Vec<MovementAnalysis>> {
         let mut movement_analyses = Vec::new();
         let sequence_length = 32; // MLMOVE sequence length
 
@@ -398,7 +418,7 @@ impl EnhancedDemoAnalyzer {
             let context = MovementContext {
                 map_area: self.determine_map_area(actual_vector),
                 player_health: actual_vector.health,
-                enemies_visible: 0, // Would need game state information
+                enemies_visible: 0,         // Would need game state information
                 utility_active: Vec::new(), // Would need utility tracking
             };
 
@@ -437,12 +457,13 @@ impl EnhancedDemoAnalyzer {
             let next = &window[1];
 
             // Detect significant movement changes
-            let vel_change = ((next.vel_x - current.vel_x).powi(2) + 
-                             (next.vel_y - current.vel_y).powi(2)).sqrt();
-            
+            let vel_change = ((next.vel_x - current.vel_x).powi(2)
+                + (next.vel_y - current.vel_y).powi(2))
+            .sqrt();
+
             // Detect significant angle changes
-            let angle_change = ((next.yaw - current.yaw).abs() + 
-                               (next.pitch - current.pitch).abs());
+            let angle_change =
+                ((next.yaw - current.yaw).abs() + (next.pitch - current.pitch).abs());
 
             if vel_change > 100.0 || angle_change > 30.0 || current.health != next.health {
                 points.push(i + 1);
@@ -458,12 +479,17 @@ impl EnhancedDemoAnalyzer {
     }
 
     /// Compare MLMOVE prediction with actual player action
-    fn compare_with_actual(&self, actual: &BehavioralVector, prediction: &MovementPrediction) -> ActionComparison {
+    fn compare_with_actual(
+        &self,
+        actual: &BehavioralVector,
+        prediction: &MovementPrediction,
+    ) -> ActionComparison {
         // Convert actual movement to discrete action (simplified)
         let actual_action = self.vector_to_discrete_action(actual);
-        
+
         // Find rank of actual action in predictions
-        let mut ranked_actions: Vec<(usize, f32)> = prediction.action_probabilities
+        let mut ranked_actions: Vec<(usize, f32)> = prediction
+            .action_probabilities
             .iter()
             .enumerate()
             .map(|(i, &prob)| (i, prob))
@@ -487,8 +513,12 @@ impl EnhancedDemoAnalyzer {
             actual_action_rank: actual_rank,
             difference_description: format!(
                 "Predicted: dir={} speed={} jump={}, Actual: dir={} speed={} jump={}",
-                predicted_action.direction, predicted_action.speed, predicted_action.jump,
-                actual_action.direction, actual_action.speed, actual_action.jump
+                predicted_action.direction,
+                predicted_action.speed,
+                predicted_action.jump,
+                actual_action.direction,
+                actual_action.speed,
+                actual_action.jump
             ),
         }
     }
@@ -517,7 +547,11 @@ impl EnhancedDemoAnalyzer {
 
         let jump = if vector.is_airborne > 0.5 { 1 } else { 0 };
 
-        cs2_ml::DiscreteAction { direction, speed, jump }
+        cs2_ml::DiscreteAction {
+            direction,
+            speed,
+            jump,
+        }
     }
 
     /// Convert discrete action to index in 97-way action space
@@ -525,18 +559,28 @@ impl EnhancedDemoAnalyzer {
         if action.direction == 8 {
             return 96; // No-op action
         }
-        
-        (action.direction as usize) + 
-        (action.speed as usize * 8) + 
-        (action.jump as usize * 48)
+
+        (action.direction as usize) + (action.speed as usize * 8) + (action.jump as usize * 48)
     }
 
     /// Calculate similarity between two discrete actions
-    fn calculate_action_similarity(&self, actual: &cs2_ml::DiscreteAction, predicted: &cs2_ml::DiscreteAction) -> f32 {
-        let dir_sim = if actual.direction == predicted.direction { 1.0 } else { 0.0 };
+    fn calculate_action_similarity(
+        &self,
+        actual: &cs2_ml::DiscreteAction,
+        predicted: &cs2_ml::DiscreteAction,
+    ) -> f32 {
+        let dir_sim = if actual.direction == predicted.direction {
+            1.0
+        } else {
+            0.0
+        };
         let speed_sim = 1.0 - (actual.speed as f32 - predicted.speed as f32).abs() / 5.0;
-        let jump_sim = if actual.jump == predicted.jump { 1.0 } else { 0.0 };
-        
+        let jump_sim = if actual.jump == predicted.jump {
+            1.0
+        } else {
+            0.0
+        };
+
         (dir_sim + speed_sim + jump_sim) / 3.0
     }
 
@@ -586,7 +630,7 @@ mod tests {
     fn test_discrete_action_conversion() -> Result<()> {
         let config = AnalysisConfig::default();
         let analyzer = EnhancedDemoAnalyzer::new(config)?;
-        
+
         let vector = BehavioralVector {
             tick: 1,
             steamid: 123456789,
@@ -611,39 +655,37 @@ mod tests {
         assert!(action.direction < 8);
         assert!(action.speed <= 5);
         assert!(action.jump <= 1);
-        
+
         Ok(())
     }
 
     #[test]
     fn test_enhanced_analysis() -> Result<()> {
-        let vectors = vec![
-            BehavioralVector {
-                tick: 1,
-                steamid: 123456789,
-                health: 100.0,
-                armor: 100.0,
-                pos_x: 100.0,
-                pos_y: 200.0,
-                pos_z: 64.0,
-                vel_x: 250.0,
-                vel_y: 0.0,
-                vel_z: 0.0,
-                yaw: 90.0,
-                pitch: 0.0,
-                weapon_id: 7,
-                ammo: 30.0,
-                is_airborne: 0.0,
-                delta_yaw: 0.0,
-                delta_pitch: 0.0,
-            }
-        ];
+        let vectors = vec![BehavioralVector {
+            tick: 1,
+            steamid: 123456789,
+            health: 100.0,
+            armor: 100.0,
+            pos_x: 100.0,
+            pos_y: 200.0,
+            pos_z: 64.0,
+            vel_x: 250.0,
+            vel_y: 0.0,
+            vel_z: 0.0,
+            yaw: 90.0,
+            pitch: 0.0,
+            weapon_id: 7,
+            ammo: 30.0,
+            is_airborne: 0.0,
+            delta_yaw: 0.0,
+            delta_pitch: 0.0,
+        }];
 
         let result = analyze_demo_enhanced(&vectors, None)?;
-        
+
         assert!(result.performance_metrics.total_time_ms > 0.0);
         assert!(!result.pro_gap_analysis.closest_pro_style.is_empty());
-        
+
         Ok(())
     }
 }

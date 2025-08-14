@@ -1,15 +1,14 @@
 /// Pro Reference Dataset Module - CSKNOW Integration
-/// 
+///
 /// Implements pro player reference data integration from the MLMOVE/CSKNOW dataset
 /// for Earth Mover Distance (EMD) based similarity scoring and pro gap analysis.
-
 use anyhow::Result;
+use cs2_common::feature_extraction::*;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use cs2_common::feature_extraction::*;
 
 /// CSKNOW Pro Reference Dataset
-/// 
+///
 /// Contains aggregated professional player data from 123h of 16Hz pro Retakes
 /// Compressed from 21GB to 4GB Parquet format for efficient access
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,7 +24,7 @@ pub struct ProReferenceDataset {
 }
 
 /// Occupancy Vector for Earth Mover Distance calculations
-/// 
+///
 /// Represents spatial distribution patterns on maps, used for EMD-based
 /// similarity scoring between user gameplay and professional patterns
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -96,7 +95,7 @@ pub struct DecisionBenchmarks {
 }
 
 /// Earth Mover Distance Calculator
-/// 
+///
 /// Implements EMD calculation for comparing user occupancy patterns
 /// with professional reference patterns from CSKNOW dataset
 pub struct EarthMoverDistanceCalculator {
@@ -107,7 +106,7 @@ pub struct EarthMoverDistanceCalculator {
 }
 
 /// Pro Gap Analysis Result
-/// 
+///
 /// Contains comprehensive similarity analysis between user performance
 /// and professional benchmarks
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -151,12 +150,18 @@ impl EarthMoverDistanceCalculator {
     }
 
     /// Calculate Earth Mover Distance between user and pro occupancy vectors
-    /// 
+    ///
     /// Uses simplified EMD calculation optimized for real-time analysis
     /// Returns distance value where 0.0 = identical patterns, 1.0 = maximally different
-    pub fn calculate_emd(&self, user_vector: &OccupancyVector, pro_vector: &OccupancyVector) -> Result<f32> {
+    pub fn calculate_emd(
+        &self,
+        user_vector: &OccupancyVector,
+        pro_vector: &OccupancyVector,
+    ) -> Result<f32> {
         if user_vector.position_frequencies.len() != pro_vector.position_frequencies.len() {
-            return Err(anyhow::anyhow!("Occupancy vectors must have same dimensions"));
+            return Err(anyhow::anyhow!(
+                "Occupancy vectors must have same dimensions"
+            ));
         }
 
         // Simplified Wasserstein-1 distance calculation
@@ -176,14 +181,25 @@ impl EarthMoverDistanceCalculator {
     }
 
     /// Calculate EMD for side-specific patterns (T/CT)
-    pub fn calculate_side_specific_emd(&self, user_vector: &OccupancyVector, pro_vector: &OccupancyVector, side: &str) -> Result<f32> {
-        let user_side_data = user_vector.side_specific.get(side)
+    pub fn calculate_side_specific_emd(
+        &self,
+        user_vector: &OccupancyVector,
+        pro_vector: &OccupancyVector,
+        side: &str,
+    ) -> Result<f32> {
+        let user_side_data = user_vector
+            .side_specific
+            .get(side)
             .ok_or_else(|| anyhow::anyhow!("Side {} not found in user vector", side))?;
-        let pro_side_data = pro_vector.side_specific.get(side)
+        let pro_side_data = pro_vector
+            .side_specific
+            .get(side)
             .ok_or_else(|| anyhow::anyhow!("Side {} not found in pro vector", side))?;
 
         if user_side_data.len() != pro_side_data.len() {
-            return Err(anyhow::anyhow!("Side-specific vectors must have same dimensions"));
+            return Err(anyhow::anyhow!(
+                "Side-specific vectors must have same dimensions"
+            ));
         }
 
         let mut cumulative_diff = 0.0;
@@ -203,13 +219,13 @@ impl EarthMoverDistanceCalculator {
 
 impl ProReferenceDataset {
     /// Load CSKNOW dataset from Parquet files
-    /// 
+    ///
     /// In production, would load from MinIO storage or local cache
     /// Currently returns demo data for testing
     pub fn load_csknow_dataset() -> Result<Self> {
         // TODO: Implement actual Parquet loading from CSKNOW dataset
         // For now, return demo data based on research paper specifications
-        
+
         let mut map_occupancy = HashMap::new();
         let mut movement_patterns = HashMap::new();
         let mut tactical_positions = HashMap::new();
@@ -246,16 +262,22 @@ impl ProReferenceDataset {
 
         // Create demo tactical positions (major dust2 positions)
         let mut dust2_positions = HashMap::new();
-        dust2_positions.insert("A_site".to_string(), TacticalPosition {
-            success_rate: 0.72,
-            usage_frequency: 0.85,
-            recommended_angles: vec![45.0, 90.0, 135.0],
-        });
-        dust2_positions.insert("B_tunnels".to_string(), TacticalPosition {
-            success_rate: 0.68,
-            usage_frequency: 0.78,
-            recommended_angles: vec![0.0, 45.0, 315.0],
-        });
+        dust2_positions.insert(
+            "A_site".to_string(),
+            TacticalPosition {
+                success_rate: 0.72,
+                usage_frequency: 0.85,
+                recommended_angles: vec![45.0, 90.0, 135.0],
+            },
+        );
+        dust2_positions.insert(
+            "B_tunnels".to_string(),
+            TacticalPosition {
+                success_rate: 0.68,
+                usage_frequency: 0.78,
+                recommended_angles: vec![0.0, 45.0, 315.0],
+            },
+        );
 
         tactical_positions.insert("de_dust2".to_string(), dust2_positions);
 
@@ -288,11 +310,17 @@ impl ProReferenceDataset {
     }
 
     /// Analyze user performance gap vs professional benchmarks
-    pub fn analyze_pro_gap(&self, user_features: &ExtractedFeatures, map_name: &str) -> Result<ProGapAnalysis> {
+    pub fn analyze_pro_gap(
+        &self,
+        user_features: &ExtractedFeatures,
+        map_name: &str,
+    ) -> Result<ProGapAnalysis> {
         let emd_calculator = EarthMoverDistanceCalculator::new();
-        
+
         // Get pro reference data for the map
-        let pro_occupancy = self.map_occupancy_patterns.get(map_name)
+        let pro_occupancy = self
+            .map_occupancy_patterns
+            .get(map_name)
             .ok_or_else(|| anyhow::anyhow!("No pro reference data for map: {}", map_name))?;
 
         // Create user occupancy vector from features (simplified)
@@ -324,19 +352,24 @@ impl ProReferenceDataset {
         })
     }
 
-    fn create_user_occupancy_vector(&self, features: &ExtractedFeatures, map_name: &str) -> Result<OccupancyVector> {
+    fn create_user_occupancy_vector(
+        &self,
+        features: &ExtractedFeatures,
+        map_name: &str,
+    ) -> Result<OccupancyVector> {
         // Simplified user occupancy vector creation
         // In production, would aggregate from actual positional data
-        
+
         let grid_size = 64 * 64;
         let mut position_frequencies = vec![0.0; grid_size];
-        
+
         // Use movement efficiency and positioning metrics to estimate occupancy
         let base_frequency = 1.0 / grid_size as f32;
         let movement_multiplier = features.player_mechanics.movement_efficiency;
-        
+
         for i in 0..grid_size {
-            position_frequencies[i] = base_frequency * movement_multiplier * (1.0 + (i as f32 / grid_size as f32));
+            position_frequencies[i] =
+                base_frequency * movement_multiplier * (1.0 + (i as f32 / grid_size as f32));
         }
 
         // Normalize
@@ -357,22 +390,37 @@ impl ProReferenceDataset {
 
     fn calculate_feature_gaps(&self, user_features: &ExtractedFeatures) -> Result<FeatureGaps> {
         let benchmarks = &self.performance_benchmarks;
-        
-        let aim_gap = (
-            (user_features.player_mechanics.headshot_percentage - benchmarks.aim_benchmarks.headshot_percentage).abs() +
-            (user_features.player_mechanics.flick_accuracy - benchmarks.aim_benchmarks.flick_accuracy).abs() +
-            (user_features.player_mechanics.target_acquisition_time - benchmarks.aim_benchmarks.target_acquisition_time).abs()
-        ) / 3.0;
 
-        let movement_gap = (
-            (user_features.player_mechanics.movement_efficiency - benchmarks.movement_benchmarks.movement_efficiency).abs() +
-            (user_features.player_mechanics.counter_strafe_effectiveness - benchmarks.movement_benchmarks.counter_strafe_effectiveness).abs()
-        ) / 2.0;
+        let aim_gap = ((user_features.player_mechanics.headshot_percentage
+            - benchmarks.aim_benchmarks.headshot_percentage)
+            .abs()
+            + (user_features.player_mechanics.flick_accuracy
+                - benchmarks.aim_benchmarks.flick_accuracy)
+                .abs()
+            + (user_features.player_mechanics.target_acquisition_time
+                - benchmarks.aim_benchmarks.target_acquisition_time)
+                .abs())
+            / 3.0;
 
-        let decision_gap = (
-            (user_features.decision_metrics.decision_speed_after_first_contact - benchmarks.decision_benchmarks.decision_speed).abs() +
-            (user_features.decision_metrics.buy_efficiency_value_per_dollar - benchmarks.decision_benchmarks.buy_efficiency).abs()
-        ) / 2.0;
+        let movement_gap = ((user_features.player_mechanics.movement_efficiency
+            - benchmarks.movement_benchmarks.movement_efficiency)
+            .abs()
+            + (user_features.player_mechanics.counter_strafe_effectiveness
+                - benchmarks.movement_benchmarks.counter_strafe_effectiveness)
+                .abs())
+            / 2.0;
+
+        let decision_gap = ((user_features
+            .decision_metrics
+            .decision_speed_after_first_contact
+            - benchmarks.decision_benchmarks.decision_speed)
+            .abs()
+            + (user_features
+                .decision_metrics
+                .buy_efficiency_value_per_dollar
+                - benchmarks.decision_benchmarks.buy_efficiency)
+                .abs())
+            / 2.0;
 
         Ok(FeatureGaps {
             aim_gap,
@@ -385,9 +433,10 @@ impl ProReferenceDataset {
 
     fn generate_recommendations(&self, gaps: &FeatureGaps) -> Vec<String> {
         let mut recommendations = Vec::new();
-        
+
         if gaps.aim_gap > 0.2 {
-            recommendations.push("Focus on crosshair placement and pre-aiming common angles".to_string());
+            recommendations
+                .push("Focus on crosshair placement and pre-aiming common angles".to_string());
         }
         if gaps.movement_gap > 0.15 {
             recommendations.push("Practice counter-strafing and movement efficiency".to_string());
@@ -396,7 +445,8 @@ impl ProReferenceDataset {
             recommendations.push("Work on decision speed and economic management".to_string());
         }
         if gaps.positioning_gap > 0.2 {
-            recommendations.push("Study professional positioning patterns and map control".to_string());
+            recommendations
+                .push("Study professional positioning patterns and map control".to_string());
         }
 
         recommendations
@@ -405,11 +455,12 @@ impl ProReferenceDataset {
     fn find_closest_pro_style(&self, features: &ExtractedFeatures) -> Result<(String, f32)> {
         // Simplified professional style matching
         // In production, would use trained clustering on professional player data
-        
-        let mechanics_score = (features.player_mechanics.headshot_percentage + 
-                             features.player_mechanics.flick_accuracy + 
-                             features.player_mechanics.movement_efficiency) / 3.0;
-        
+
+        let mechanics_score = (features.player_mechanics.headshot_percentage
+            + features.player_mechanics.flick_accuracy
+            + features.player_mechanics.movement_efficiency)
+            / 3.0;
+
         if mechanics_score > 0.8 {
             Ok(("s1mple".to_string(), 0.87))
         } else if mechanics_score > 0.7 {
@@ -426,16 +477,16 @@ impl ProReferenceDataset {
     fn create_demo_dust2_occupancy() -> Vec<f32> {
         let grid_size = 64 * 64;
         let mut occupancy = vec![0.0; grid_size];
-        
+
         // Simulate professional occupancy patterns on dust2
         // Higher frequencies at common professional positions
         for i in 0..grid_size {
             let x = i % 64;
             let y = i / 64;
-            
+
             // Create hotspots at key professional positions
             let mut frequency = 0.1; // Base frequency
-            
+
             // A site area (high activity)
             if x >= 20 && x <= 35 && y >= 15 && y <= 30 {
                 frequency += 0.8;
@@ -448,10 +499,10 @@ impl ProReferenceDataset {
             if x >= 25 && x <= 40 && y >= 30 && y <= 45 {
                 frequency += 0.4;
             }
-            
+
             occupancy[i] = frequency;
         }
-        
+
         // Normalize
         let sum: f32 = occupancy.iter().sum();
         if sum > 0.0 {
@@ -459,7 +510,7 @@ impl ProReferenceDataset {
                 *freq /= sum;
             }
         }
-        
+
         occupancy
     }
 
@@ -469,7 +520,7 @@ impl ProReferenceDataset {
     }
 
     fn create_demo_ct_side_pattern() -> Vec<f32> {
-        // Simplified CT-side specific occupancy pattern  
+        // Simplified CT-side specific occupancy pattern
         vec![0.1; 4096] // 64x64 grid flattened
     }
 
@@ -477,18 +528,18 @@ impl ProReferenceDataset {
         // Professional velocity distribution from research
         // Peaks at common movement speeds: 250 (walk), 320 (run)
         let mut distribution = vec![0.0; 400]; // 0-400 units/sec
-        
+
         for (i, vel) in distribution.iter_mut().enumerate() {
             let speed = i as f32;
             if speed >= 245.0 && speed <= 255.0 {
                 *vel = 0.3; // Walking speed peak
             } else if speed >= 315.0 && speed <= 325.0 {
-                *vel = 0.4; // Running speed peak  
+                *vel = 0.4; // Running speed peak
             } else {
                 *vel = 0.02; // Background frequency
             }
         }
-        
+
         distribution
     }
 
@@ -496,7 +547,7 @@ impl ProReferenceDataset {
         // Professional angle change patterns
         // Most changes are small (micro-adjustments), some are large (flicks)
         let mut patterns = vec![0.0; 360]; // 0-360 degrees
-        
+
         for (i, angle) in patterns.iter_mut().enumerate() {
             let degrees = i as f32;
             if degrees <= 5.0 {
@@ -509,7 +560,7 @@ impl ProReferenceDataset {
                 *angle = 0.02; // Background
             }
         }
-        
+
         patterns
     }
 }
@@ -522,42 +573,42 @@ mod tests {
     #[test]
     fn test_pro_dataset_loading() -> Result<()> {
         let dataset = ProReferenceDataset::load_csknow_dataset()?;
-        
+
         assert!(dataset.map_occupancy_patterns.contains_key("de_dust2"));
         assert!(dataset.movement_patterns.contains_key("de_dust2"));
         assert!(dataset.tactical_positions.contains_key("de_dust2"));
-        
+
         Ok(())
     }
 
     #[test]
     fn test_emd_calculation() -> Result<()> {
         let calculator = EarthMoverDistanceCalculator::new();
-        
+
         let vector1 = OccupancyVector {
             position_frequencies: vec![0.5, 0.3, 0.2],
             grid_dimensions: (3, 1),
             map_name: "test".to_string(),
             side_specific: HashMap::new(),
         };
-        
+
         let vector2 = OccupancyVector {
             position_frequencies: vec![0.4, 0.4, 0.2],
             grid_dimensions: (3, 1),
             map_name: "test".to_string(),
             side_specific: HashMap::new(),
         };
-        
+
         let emd = calculator.calculate_emd(&vector1, &vector2)?;
         assert!(emd >= 0.0 && emd <= 1.0);
-        
+
         Ok(())
     }
 
     #[test]
     fn test_pro_gap_analysis() -> Result<()> {
         let dataset = ProReferenceDataset::load_csknow_dataset()?;
-        
+
         // Create test user features
         let user_features = ExtractedFeatures {
             player_mechanics: PlayerMechanicsFeatures {
@@ -638,30 +689,30 @@ mod tests {
                 information_denial_effectiveness: 0.6,
             },
         };
-        
+
         let analysis = dataset.analyze_pro_gap(&user_features, "de_dust2")?;
-        
+
         assert!(analysis.overall_pro_gap >= 0.0 && analysis.overall_pro_gap <= 1.0);
         assert!(!analysis.improvement_recommendations.is_empty());
         assert!(!analysis.closest_pro_style.is_empty());
-        
+
         Ok(())
     }
 
     #[test]
     fn test_identical_vectors_zero_emd() -> Result<()> {
         let calculator = EarthMoverDistanceCalculator::new();
-        
+
         let vector = OccupancyVector {
             position_frequencies: vec![0.33, 0.33, 0.34],
             grid_dimensions: (3, 1),
             map_name: "test".to_string(),
             side_specific: HashMap::new(),
         };
-        
+
         let emd = calculator.calculate_emd(&vector, &vector)?;
         assert!(emd < 0.001); // Should be very close to 0 for identical vectors
-        
+
         Ok(())
     }
 }

@@ -1,16 +1,13 @@
+use crate::mlmove_transformer::{MLMOVEConfig, MLMOVETransformer};
 /// PyTorch to Candle Conversion Utilities
-/// 
+///
 /// Implements conversion pipeline for PyTorch→Candle model weights and fine-tuning
 /// infrastructure for CS2 demo adaptation as outlined in the MLMOVE research integration.
-
 use anyhow::Result;
-use candle_core::{Device, Tensor, DType};
-use candle_nn::{VarBuilder, VarMap};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::path::Path;
+use candle_core::Device;
 use cs2_common::BehavioralVector;
-use crate::mlmove_transformer::{MLMOVETransformer, MLMOVEConfig};
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Configuration for PyTorch to Candle conversion
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -117,7 +114,7 @@ impl TorchToCandleConverter {
     }
 
     /// Convert PyTorch model to Candle safetensors format
-    /// 
+    ///
     /// This is a placeholder implementation. In production, would use:
     /// 1. Load PyTorch model using tch-rs or Python interop
     /// 2. Extract state_dict weights and biases
@@ -130,14 +127,18 @@ impl TorchToCandleConverter {
 
         // TODO: Implement actual PyTorch→Candle conversion
         // For now, create a placeholder safetensors file structure
-        
+
         if !Path::new(&self.config.pytorch_model_path).exists() {
-            return Err(anyhow::anyhow!("PyTorch model file not found: {}", self.config.pytorch_model_path));
+            return Err(anyhow::anyhow!(
+                "PyTorch model file not found: {}",
+                self.config.pytorch_model_path
+            ));
         }
 
         // Create Candle model with the specified configuration
         let device = Device::Cpu;
-        let transformer = MLMOVETransformer::with_config(self.config.model_config.clone(), device)?;
+        let _transformer =
+            MLMOVETransformer::with_config(self.config.model_config.clone(), device)?;
 
         // In production, would:
         // 1. Load PyTorch weights using Python script or tch-rs
@@ -145,14 +146,14 @@ impl TorchToCandleConverter {
         // 3. Convert tensor formats and save as safetensors
 
         self.create_conversion_script()?;
-        
+
         println!("Conversion completed successfully!");
         Ok(())
     }
 
     /// Create Python script for PyTorch→safetensors conversion
     fn create_conversion_script(&self) -> Result<()> {
-        let script_content = format!(r#"
+        let script_content = r#"
 #!/usr/bin/env python3
 """
 PyTorch to Safetensors Conversion Script
@@ -259,11 +260,11 @@ if __name__ == "__main__":
     config_path = sys.argv[3] if len(sys.argv) > 3 else None
     
     convert_pytorch_to_safetensors(pytorch_path, output_path, config_path)
-"#, pytorch_path = self.config.pytorch_model_path, output_path = self.config.candle_output_path);
+"#;
 
         std::fs::write("scripts/torch2safetensors.py", script_content)?;
         println!("Created conversion script at scripts/torch2safetensors.py");
-        
+
         Ok(())
     }
 
@@ -288,13 +289,16 @@ impl CS2FineTuner {
 
     /// Load CS2 training dataset from parquet files
     pub fn load_dataset(&self) -> Result<CS2TrainingDataset> {
-        println!("Loading CS2 training dataset from: {}", self.config.cs2_dataset_path);
+        println!(
+            "Loading CS2 training dataset from: {}",
+            self.config.cs2_dataset_path
+        );
 
         // TODO: Implement actual dataset loading from parquet
         // For now, create a demo dataset
-        
+
         let samples = self.create_demo_samples(1000)?;
-        
+
         let metadata = DatasetMetadata {
             sample_count: samples.len(),
             unique_players: 50, // Estimated from demo data
@@ -309,16 +313,18 @@ impl CS2FineTuner {
     /// Fine-tune MLMOVE model on CS2 data
     pub fn fine_tune(&self) -> Result<TrainingMetrics> {
         println!("Starting fine-tuning on CS2 data...");
-        
+
         // Load base model
-        let mut model = MLMOVETransformer::load_pretrained(&self.config.base_model_path, self.device.clone())?;
-        
+        let model =
+            MLMOVETransformer::load_pretrained(&self.config.base_model_path, self.device.clone())?;
+
         // Load training dataset
         let dataset = self.load_dataset()?;
         println!("Loaded {} training samples", dataset.metadata.sample_count);
 
         // Split into train/validation
-        let val_split_idx = (dataset.samples.len() as f32 * (1.0 - self.config.validation_split)) as usize;
+        let val_split_idx =
+            (dataset.samples.len() as f32 * (1.0 - self.config.validation_split)) as usize;
         let (train_samples, val_samples) = dataset.samples.split_at(val_split_idx);
 
         let start_time = std::time::Instant::now();
@@ -327,15 +333,15 @@ impl CS2FineTuner {
         // Training loop
         for epoch in 0..self.config.epochs {
             let epoch_start = std::time::Instant::now();
-            
+
             // Training phase
             let train_metrics = self.train_epoch(&model, train_samples, epoch)?;
-            
+
             // Validation phase
             let val_metrics = self.validate_epoch(&model, val_samples)?;
-            
+
             let epoch_time = epoch_start.elapsed().as_secs_f32();
-            
+
             println!("Epoch {}/{}: train_loss={:.4}, val_loss={:.4}, train_acc={:.4}, val_acc={:.4}, time={:.2}s",
                 epoch + 1, self.config.epochs,
                 train_metrics.0, val_metrics.0,
@@ -347,12 +353,12 @@ impl CS2FineTuner {
             if val_metrics.0 < best_val_loss {
                 best_val_loss = val_metrics.0;
                 self.save_model(&model, epoch)?;
-                println!("Saved new best model with validation loss: {:.4}", best_val_loss);
+                println!("Saved new best model with validation loss: {best_val_loss:.4}");
             }
         }
 
         let total_time = start_time.elapsed().as_secs_f32();
-        
+
         Ok(TrainingMetrics {
             epoch: self.config.epochs,
             train_loss: 0.0, // Would track actual losses
@@ -365,42 +371,54 @@ impl CS2FineTuner {
     }
 
     /// Train for one epoch
-    fn train_epoch(&self, model: &MLMOVETransformer, samples: &[TrainingSample], epoch: usize) -> Result<(f32, f32)> {
+    fn train_epoch(
+        &self,
+        _model: &MLMOVETransformer,
+        _samples: &[TrainingSample],
+        epoch: usize,
+    ) -> Result<(f32, f32)> {
         // TODO: Implement actual training with gradient computation
         // For now, return mock metrics
-        
+
         let train_loss = 0.5 - (epoch as f32 * 0.05); // Simulated decreasing loss
         let train_accuracy = 0.6 + (epoch as f32 * 0.03); // Simulated increasing accuracy
-        
+
         Ok((train_loss.max(0.1), train_accuracy.min(0.95)))
     }
 
     /// Validate for one epoch
-    fn validate_epoch(&self, model: &MLMOVETransformer, samples: &[TrainingSample]) -> Result<(f32, f32)> {
+    fn validate_epoch(
+        &self,
+        _model: &MLMOVETransformer,
+        _samples: &[TrainingSample],
+    ) -> Result<(f32, f32)> {
         // TODO: Implement actual validation
         // For now, return mock metrics
-        
+
         let val_loss = 0.6; // Placeholder
         let val_accuracy = 0.75; // Placeholder
-        
+
         Ok((val_loss, val_accuracy))
     }
 
     /// Save fine-tuned model
-    fn save_model(&self, model: &MLMOVETransformer, epoch: usize) -> Result<()> {
-        let save_path = format!("{}_epoch_{}.safetensors", self.config.output_model_path, epoch);
-        println!("Saving model to: {}", save_path);
-        
+    fn save_model(&self, _model: &MLMOVETransformer, epoch: usize) -> Result<()> {
+        let save_path = format!(
+            "{}_epoch_{}.safetensors",
+            self.config.output_model_path, epoch
+        );
+        println!("Saving model to: {save_path}");
+
         // TODO: Implement actual model saving
         // Would extract weights from model and save as safetensors
-        
+
         Ok(())
     }
 
     /// Create demo training samples for testing
     fn create_demo_samples(&self, count: usize) -> Result<Vec<TrainingSample>> {
         let mut samples = Vec::new();
-        
+
         for i in 0..count {
             // Create sequence of behavioral vectors
             let sequence: Vec<BehavioralVector> = (0..self.config.sequence_length)
@@ -434,7 +452,7 @@ impl CS2FineTuner {
                 weight: 1.0,
             });
         }
-        
+
         Ok(samples)
     }
 }
@@ -474,10 +492,10 @@ pub fn create_finetuning_config(
 pub fn convert_mlmove_to_candle(pytorch_path: &str, candle_path: &str) -> Result<()> {
     let config = create_conversion_config(pytorch_path, candle_path);
     let converter = TorchToCandleConverter::new(config);
-    
+
     converter.convert()?;
     converter.validate_conversion()?;
-    
+
     Ok(())
 }
 
@@ -491,7 +509,7 @@ pub fn finetune_on_cs2_data(
     let config = create_finetuning_config(base_model, cs2_dataset, output_model, epochs);
     let device = Device::Cpu; // Could be GPU if available
     let finetuner = CS2FineTuner::new(config, device);
-    
+
     finetuner.fine_tune()
 }
 
@@ -509,7 +527,8 @@ mod tests {
 
     #[test]
     fn test_finetuning_config_creation() {
-        let config = create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 10);
+        let config =
+            create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 10);
         assert_eq!(config.epochs, 10);
         assert_eq!(config.batch_size, 32);
         assert_eq!(config.learning_rate, 1e-4);
@@ -517,30 +536,32 @@ mod tests {
 
     #[test]
     fn test_demo_samples_creation() -> Result<()> {
-        let config = create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 5);
+        let config =
+            create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 5);
         let finetuner = CS2FineTuner::new(config, Device::Cpu);
-        
+
         let samples = finetuner.create_demo_samples(100)?;
         assert_eq!(samples.len(), 100);
-        
+
         for sample in &samples {
             assert_eq!(sample.input_sequence.len(), 32);
             assert!(sample.target_action < 97);
             assert_eq!(sample.weight, 1.0);
         }
-        
+
         Ok(())
     }
 
     #[test]
     fn test_dataset_loading() -> Result<()> {
-        let config = create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 5);
+        let config =
+            create_finetuning_config("base.safetensors", "data.parquet", "output.safetensors", 5);
         let finetuner = CS2FineTuner::new(config, Device::Cpu);
-        
+
         let dataset = finetuner.load_dataset()?;
         assert!(dataset.samples.len() > 0);
         assert!(dataset.metadata.sample_count > 0);
-        
+
         Ok(())
     }
 }

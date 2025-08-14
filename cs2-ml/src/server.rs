@@ -15,8 +15,8 @@ pub fn serve(port: u16) -> Result<()> {
 
 // Separated for testing
 pub fn serve_with_model(_net: crate::model::BehaviorNet, port: u16) -> Result<()> {
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", port))?;
-    println!("Policy server listening on port {}", port);
+    let listener = TcpListener::bind(format!("0.0.0.0:{port}"))?;
+    println!("Policy server listening on port {port}");
     for stream in listener.incoming() {
         let mut stream = stream?;
         let mut buf = [0u8; std::mem::size_of::<InputVector>()];
@@ -30,11 +30,11 @@ pub fn serve_with_model(_net: crate::model::BehaviorNet, port: u16) -> Result<()
                 };
                 let out_bytes = bytemuck::bytes_of(&output);
                 if let Err(e) = stream.write_all(out_bytes) {
-                    eprintln!("Error writing response: {}", e);
+                    eprintln!("Error writing response: {e}");
                 }
             }
             Err(e) => {
-                eprintln!("Error reading from client: {}", e);
+                eprintln!("Error reading from client: {e}");
             }
         }
     }
@@ -47,9 +47,9 @@ pub fn serve_with_model_with_shutdown(
     port: u16,
     shutdown: Arc<AtomicBool>,
 ) -> Result<()> {
-    let listener = TcpListener::bind(format!("0.0.0.0:{}", port))?;
+    let listener = TcpListener::bind(format!("0.0.0.0:{port}"))?;
     listener.set_nonblocking(true)?;
-    println!("Policy server listening on port {}", port);
+    println!("Policy server listening on port {port}");
 
     while !shutdown.load(Ordering::SeqCst) {
         match listener.accept() {
@@ -66,11 +66,11 @@ pub fn serve_with_model_with_shutdown(
                         };
                         let out_bytes = bytemuck::bytes_of(&output);
                         if let Err(e) = stream.write_all(out_bytes) {
-                            eprintln!("Error writing response: {}", e);
+                            eprintln!("Error writing response: {e}");
                         }
                     }
                     Err(e) => {
-                        eprintln!("Error reading from client: {}", e);
+                        eprintln!("Error reading from client: {e}");
                     }
                 }
             }
@@ -79,7 +79,7 @@ pub fn serve_with_model_with_shutdown(
                 std::thread::sleep(std::time::Duration::from_millis(10));
             }
             Err(e) => {
-                eprintln!("Error accepting connection: {}", e);
+                eprintln!("Error accepting connection: {e}");
                 break;
             }
         }
