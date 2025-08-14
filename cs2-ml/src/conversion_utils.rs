@@ -559,7 +559,7 @@ mod tests {
         let finetuner = CS2FineTuner::new(config, Device::Cpu);
 
         let dataset = finetuner.load_dataset()?;
-        assert!(dataset.samples.len() > 0);
+        assert!(!dataset.samples.is_empty());
         assert!(dataset.metadata.sample_count > 0);
 
         Ok(())

@@ -488,15 +488,15 @@ impl ProReferenceDataset {
             let mut frequency = 0.1; // Base frequency
 
             // A site area (high activity)
-            if x >= 20 && x <= 35 && y >= 15 && y <= 30 {
+            if (20..=35).contains(&x) && (15..=30).contains(&y) {
                 frequency += 0.8;
             }
             // B tunnels (medium activity)
-            if x >= 45 && x <= 60 && y >= 40 && y <= 55 {
+            if (45..=60).contains(&x) && (40..=55).contains(&y) {
                 frequency += 0.6;
             }
             // Mid area (medium activity)
-            if x >= 25 && x <= 40 && y >= 30 && y <= 45 {
+            if (25..=40).contains(&x) && (30..=45).contains(&y) {
                 frequency += 0.4;
             }
 
@@ -531,9 +531,9 @@ impl ProReferenceDataset {
 
         for (i, vel) in distribution.iter_mut().enumerate() {
             let speed = i as f32;
-            if speed >= 245.0 && speed <= 255.0 {
+            if (245.0..=255.0).contains(&speed) {
                 *vel = 0.3; // Walking speed peak
-            } else if speed >= 315.0 && speed <= 325.0 {
+            } else if (315.0..=325.0).contains(&speed) {
                 *vel = 0.4; // Running speed peak
             } else {
                 *vel = 0.02; // Background frequency
@@ -552,9 +552,9 @@ impl ProReferenceDataset {
             let degrees = i as f32;
             if degrees <= 5.0 {
                 *angle = 0.6; // Small adjustments most common
-            } else if degrees >= 45.0 && degrees <= 90.0 {
+            } else if (45.0..=90.0).contains(&degrees) {
                 *angle = 0.2; // Medium flicks
-            } else if degrees >= 90.0 && degrees <= 180.0 {
+            } else if (90.0..=180.0).contains(&degrees) {
                 *angle = 0.1; // Large flicks
             } else {
                 *angle = 0.02; // Background
@@ -568,7 +568,6 @@ impl ProReferenceDataset {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cs2_common::BehavioralVector;
 
     #[test]
     fn test_pro_dataset_loading() -> Result<()> {
@@ -600,7 +599,7 @@ mod tests {
         };
 
         let emd = calculator.calculate_emd(&vector1, &vector2)?;
-        assert!(emd >= 0.0 && emd <= 1.0);
+        assert!((0.0..=1.0).contains(&emd));
 
         Ok(())
     }
