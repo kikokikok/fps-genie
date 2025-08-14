@@ -14,8 +14,14 @@ WORKDIR /app
 # Copy source code
 COPY . .
 
-# Build for release - skip tests and examples for faster builds
-RUN cargo build --release --workspace --bins
+# Build core components (avoid problematic ml crate for now)
+RUN cargo build --release --no-default-features \
+    -p cs2-demo-parser \
+    -p cs2-data-pipeline \
+    -p cs2-demo-analyzer \
+    -p cs2-analytics \
+    -p cs2-common \
+    -p csgoproto
 
 # Runtime image
 FROM debian:bookworm-slim
