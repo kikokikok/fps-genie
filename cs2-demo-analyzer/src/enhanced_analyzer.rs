@@ -462,8 +462,7 @@ impl EnhancedDemoAnalyzer {
             .sqrt();
 
             // Detect significant angle changes
-            let angle_change =
-                ((next.yaw - current.yaw).abs() + (next.pitch - current.pitch).abs());
+            let angle_change = (next.yaw - current.yaw).abs() + (next.pitch - current.pitch).abs();
 
             if vel_change > 100.0 || angle_change > 30.0 || current.health != next.health {
                 points.push(i + 1);
