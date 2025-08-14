@@ -264,4 +264,38 @@ mod tests {
         assert!(!w.player_props.is_empty());
         assert!(!w.events.is_empty());
     }
+
+    #[test]
+    fn rich_preset_provides_more_than_standard() {
+        let standard = build_wanted(ParsingPreset::Standard.to_features());
+        let rich = build_wanted(ParsingPreset::Rich.to_features());
+        
+        // Rich should have more player props due to ECONOMY features
+        assert!(rich.player_props.len() > standard.player_props.len(), 
+                "Rich preset should have more player props than Standard");
+        
+        // Rich should have more other props due to RULES features  
+        assert!(rich.other_props.len() >= standard.other_props.len(), 
+                "Rich preset should have at least as many other props as Standard");
+        
+        // Rich should have at least as many events as Standard
+        assert!(rich.events.len() >= standard.events.len(), 
+                "Rich preset should have at least as many events as Standard");
+        
+        // Verify Rich includes economy-specific props
+        let has_economy_props = rich.player_props.iter().any(|prop| 
+            prop.contains("InGameMoneyServices") || prop.contains("m_iAccount")
+        );
+        assert!(has_economy_props, "Rich preset should include economy properties");
+    }
+
+    #[test]
+    fn minimal_preset_is_subset() {
+        let minimal = build_wanted(ParsingPreset::Minimal.to_features());
+        let standard = build_wanted(ParsingPreset::Standard.to_features());
+        
+        // Minimal should have fewer props than Standard
+        assert!(minimal.player_props.len() < standard.player_props.len());
+        assert!(minimal.events.len() <= standard.events.len());
+    }
 }

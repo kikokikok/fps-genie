@@ -14,6 +14,7 @@ use crate::models::{
     KeyMoment, KeyMomentType, Match, MomentBehavior, PlayerSnapshot, ProcessingStatus,
 };
 
+use cs2_common::parsing_features::{build_wanted, ParsingPreset};
 use cs2_demo_parser::first_pass::parser_settings::ParserInputs;
 use cs2_demo_parser::parse_demo::{DemoOutput, Parser, ParsingMode};
 
@@ -189,48 +190,17 @@ impl DemoProcessor {
         static EMPTY_LOOKUP: OnceLock<Vec<(u8, u8)>> = OnceLock::new();
         let lut = EMPTY_LOOKUP.get_or_init(Vec::new);
 
+        // Use ParsingPreset::Rich to get comprehensive parsing configuration
+        let wanted = build_wanted(ParsingPreset::Rich.to_features());
+
         ParserInputs {
             real_name_to_og_name: ahash::AHashMap::new(),
             wanted_players: Vec::new(),
-            wanted_player_props: vec![
-                "X",
-                "Y",
-                "Z",
-                "health",
-                "armor_value",
-                "velocity[0]",
-                "velocity[1]",
-                "velocity[2]",
-                "m_angEyeAngles[0]",
-                "m_angEyeAngles[1]",
-                "m_hActiveWeapon",
-                "m_iClip1",
-                "m_lifeState",
-                "m_hGroundEntity",
-                "m_bIsScoped",
-                "m_bIsWalking",
-                "m_flFlashDuration",
-                "m_iAccount",
-            ]
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect(),
-            wanted_other_props: vec![],
+            wanted_player_props: wanted.player_props,
+            wanted_other_props: wanted.other_props,
             wanted_prop_states: ahash::AHashMap::new(),
             wanted_ticks: vec![],
-            wanted_events: vec![
-                "round_start",
-                "round_end",
-                "player_death",
-                "weapon_fire",
-                "player_hurt",
-                "bomb_planted",
-                "bomb_defused",
-                "bomb_exploded",
-            ]
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect(),
+            wanted_events: wanted.events,
             parse_ents: true,
             parse_projectiles: true,
             parse_grenades: true,
