@@ -1,147 +1,372 @@
-name: Release
+name: Release Pipeline
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*.*.*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g., v1.0.0)'
+        required: true
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  create-release:
-    name: Create Release
+  # Stage 1: Create Release Container
+  build-release-container:
+    name: Build Release Container
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      image-tag: ${{ steps.meta.outputs.tags }}
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
-
-  build-release:
-    name: Build Release
-    needs: create-release
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact_name: cs2-tools-linux
-            asset_name: cs2-tools-linux-x86_64.tar.gz
-          - os: windows-latest
-            artifact_name: cs2-tools-windows
-            asset_name: cs2-tools-windows-x86_64.zip
-          - os: macos-latest
-            artifact_name: cs2-tools-macos
-            asset_name: cs2-tools-macos-x86_64.tar.gz
-
-    steps:
-      - name: Checkout sources
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install system dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Extract version
+        id: version
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
-
-      - name: Install system dependencies (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install openssl pkg-config
-
-      - name: Build release binaries
-        run: cargo build --workspace --release
-
-      - name: Package binaries (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: |
-          mkdir -p release
-          cp target/release/cs2-analytics release/
-          cp target/release/cs2-data-pipeline release/
-          cp target/release/cs2-demo-analyzer release/
-          cp target/release/cs2-ml release/
-          cp target/release/csgoproto release/
-          cp README.md LICENSE* release/ 2>/dev/null || true
-          tar -czf ${{ matrix.asset_name }} -C release .
-
-      - name: Package binaries (Windows)
-        if: matrix.os == 'windows-latest'
-        run: |
-          mkdir release
-          cp target/release/cs2-analytics.exe release/
-          cp target/release/cs2-data-pipeline.exe release/
-          cp target/release/cs2-demo-analyzer.exe release/
-          cp target/release/cs2-ml.exe release/
-          cp target/release/csgoproto.exe release/
-          cp README.md release/ 2>$null || echo "README.md not found"
-          Compress-Archive -Path release/* -DestinationPath ${{ matrix.asset_name }}
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ./${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
-          asset_content_type: application/octet-stream
-
-  publish-docker:
-    name: Publish Docker Image
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Version: ${VERSION}"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Docker Hub
+      - name: Log in to Docker Hub
+        if: secrets.DOCKERHUB_USERNAME != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Extract version
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ secrets.DOCKERHUB_USERNAME != '' && format('{0}/fps-genie', secrets.DOCKERHUB_USERNAME) || '' }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+          flavor: |
+            latest=true
 
-      - name: Build and push Docker image
+      - name: Build and push release container
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ steps.version.outputs.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/cs2-tools:${{ steps.version.outputs.VERSION }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/cs2-tools:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            RUST_VERSION=1.88
+
+  # Stage 2: Extract Binaries from Container (Cross-platform)
+  extract-binaries:
+    name: Extract Release Binaries
+    runs-on: ubuntu-latest
+    needs: build-release-container
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+    steps:
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Pull release container
+        run: |
+          CONTAINER_TAG=$(echo "${{ needs.build-release-container.outputs.image-tag }}" | head -1)
+          docker pull --platform=${{ matrix.platform }} $CONTAINER_TAG
+
+      - name: Extract binaries from container
+        run: |
+          CONTAINER_TAG=$(echo "${{ needs.build-release-container.outputs.image-tag }}" | head -1)
+          PLATFORM_SAFE=$(echo "${{ matrix.platform }}" | tr '/' '-')
+          
+          # Create temporary container to extract binaries
+          CONTAINER_ID=$(docker create --platform=${{ matrix.platform }} $CONTAINER_TAG)
+          
+          # Create directory for binaries
+          mkdir -p release-${PLATFORM_SAFE}
+          
+          # Extract binaries
+          docker cp $CONTAINER_ID:/usr/local/bin/cs2-analytics release-${PLATFORM_SAFE}/
+          docker cp $CONTAINER_ID:/usr/local/bin/cs2-data-pipeline release-${PLATFORM_SAFE}/
+          docker cp $CONTAINER_ID:/usr/local/bin/cs2-demo-analyzer release-${PLATFORM_SAFE}/
+          docker cp $CONTAINER_ID:/usr/local/bin/cs2-ml release-${PLATFORM_SAFE}/
+          docker cp $CONTAINER_ID:/usr/local/bin/csgoproto release-${PLATFORM_SAFE}/
+          
+          # Cleanup container
+          docker rm $CONTAINER_ID
+          
+          # Add metadata
+          echo "Built from: ${{ needs.build-release-container.outputs.image-tag }}" > release-${PLATFORM_SAFE}/BUILD_INFO.txt
+          echo "Platform: ${{ matrix.platform }}" >> release-${PLATFORM_SAFE}/BUILD_INFO.txt
+          echo "Version: ${{ needs.build-release-container.outputs.version }}" >> release-${PLATFORM_SAFE}/BUILD_INFO.txt
+          echo "Built on: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> release-${PLATFORM_SAFE}/BUILD_INFO.txt
+
+      - name: Package binaries
+        run: |
+          PLATFORM_SAFE=$(echo "${{ matrix.platform }}" | tr '/' '-')
+          tar -czf fps-genie-${{ needs.build-release-container.outputs.version }}-${PLATFORM_SAFE}.tar.gz -C release-${PLATFORM_SAFE} .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fps-genie-${{ needs.build-release-container.outputs.version }}-${{ matrix.platform }}
+          path: fps-genie-${{ needs.build-release-container.outputs.version }}-*.tar.gz
+
+  # Stage 3: Traditional Binary Builds (Windows/macOS)
+  build-native-binaries:
+    name: Build Native Binaries
+    runs-on: ${{ matrix.os }}
+    needs: build-release-container
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact-name: fps-genie-${{ needs.build-release-container.outputs.version }}-windows-x86_64.zip
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact-name: fps-genie-${{ needs.build-release-container.outputs.version }}-macos-x86_64.tar.gz
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact-name: fps-genie-${{ needs.build-release-container.outputs.version }}-macos-aarch64.tar.gz
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.target }}
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install protobuf pkg-config
+
+      - name: Install system dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          # Install vcpkg and protobuf
+          vcpkg install protobuf:x64-windows
+
+      - name: Build release binaries
+        run: |
+          cargo build --workspace --release --target ${{ matrix.target }} --no-default-features
+
+      - name: Package binaries (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir release
+          cp target/${{ matrix.target }}/release/cs2-analytics.exe release/
+          cp target/${{ matrix.target }}/release/cs2-data-pipeline.exe release/
+          cp target/${{ matrix.target }}/release/cs2-demo-analyzer.exe release/
+          cp target/${{ matrix.target }}/release/cs2-ml.exe release/
+          cp target/${{ matrix.target }}/release/csgoproto.exe release/
+          echo "Version: ${{ needs.build-release-container.outputs.version }}" > release/BUILD_INFO.txt
+          echo "Platform: ${{ matrix.target }}" >> release/BUILD_INFO.txt
+          echo "Built on: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss UTC')" >> release/BUILD_INFO.txt
+          Compress-Archive -Path release/* -DestinationPath ${{ matrix.artifact-name }}
+
+      - name: Package binaries (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir release
+          cp target/${{ matrix.target }}/release/cs2-analytics release/
+          cp target/${{ matrix.target }}/release/cs2-data-pipeline release/
+          cp target/${{ matrix.target }}/release/cs2-demo-analyzer release/
+          cp target/${{ matrix.target }}/release/cs2-ml release/
+          cp target/${{ matrix.target }}/release/csgoproto release/
+          echo "Version: ${{ needs.build-release-container.outputs.version }}" > release/BUILD_INFO.txt
+          echo "Platform: ${{ matrix.target }}" >> release/BUILD_INFO.txt
+          echo "Built on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> release/BUILD_INFO.txt
+          tar -czf ${{ matrix.artifact-name }} -C release .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}-binaries
+          path: ${{ matrix.artifact-name }}
+
+  # Stage 4: Create GitHub Release
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-release-container, extract-binaries, build-native-binaries]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -name "*.tar.gz" -o -name "*.zip" | xargs -I {} cp {} release-assets/
+          ls -la release-assets/
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          VERSION="${{ needs.build-release-container.outputs.version }}"
+          echo "## 🚀 Release $VERSION" > release-notes.md
+          echo "" >> release-notes.md
+          echo "### 📦 Container Images" >> release-notes.md
+          echo "- \`ghcr.io/${{ github.repository }}:$VERSION\`" >> release-notes.md
+          echo "- \`ghcr.io/${{ github.repository }}:latest\`" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🛠️ Binary Downloads" >> release-notes.md
+          echo "Choose the appropriate binary for your platform:" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "| Platform | Download |" >> release-notes.md
+          echo "|----------|----------|" >> release-notes.md
+          echo "| Linux x86_64 | fps-genie-$VERSION-linux-amd64.tar.gz |" >> release-notes.md
+          echo "| Linux ARM64 | fps-genie-$VERSION-linux-arm64.tar.gz |" >> release-notes.md
+          echo "| Windows x86_64 | fps-genie-$VERSION-windows-x86_64.zip |" >> release-notes.md
+          echo "| macOS x86_64 | fps-genie-$VERSION-macos-x86_64.tar.gz |" >> release-notes.md
+          echo "| macOS ARM64 | fps-genie-$VERSION-macos-aarch64.tar.gz |" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "### 🐳 Quick Start with Docker" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "docker pull ghcr.io/${{ github.repository }}:$VERSION" >> release-notes.md
+          echo "docker run --rm ghcr.io/${{ github.repository }}:$VERSION cs2-data-pipeline --help" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          echo "" >> release-notes.md
+          
+          # Add changelog if exists
+          if [ -f CHANGELOG.md ]; then
+            echo "### 📝 Changelog" >> release-notes.md
+            echo "" >> release-notes.md
+            sed -n "/## \[${VERSION#v}\]/,/## \[/p" CHANGELOG.md | head -n -1 >> release-notes.md
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.build-release-container.outputs.version }}
+          name: Release ${{ needs.build-release-container.outputs.version }}
+          body_path: release-notes.md
+          files: release-assets/*
+          draft: false
+          prerelease: ${{ contains(needs.build-release-container.outputs.version, 'alpha') || contains(needs.build-release-container.outputs.version, 'beta') || contains(needs.build-release-container.outputs.version, 'rc') }}
+
+  # Stage 5: Deploy to K8s (Production)
+  deploy-production:
+    name: Deploy to Production K8s
+    runs-on: ubuntu-latest
+    needs: [build-release-container, create-release]
+    if: success() && !contains(needs.build-release-container.outputs.version, 'alpha') && !contains(needs.build-release-container.outputs.version, 'beta')
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create production K8s manifests
+        run: |
+          mkdir -p k8s-production
+          
+          # Production namespace
+          cat <<EOF > k8s-production/namespace.yaml
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: fps-genie-prod
+            labels:
+              environment: production
+          EOF
+          
+          # Production deployment
+          cat <<EOF > k8s-production/deployment.yaml
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: fps-genie
+            namespace: fps-genie-prod
+            labels:
+              app: fps-genie
+              version: "${{ needs.build-release-container.outputs.version }}"
+          spec:
+            replicas: 3
+            selector:
+              matchLabels:
+                app: fps-genie
+            template:
+              metadata:
+                labels:
+                  app: fps-genie
+                  version: "${{ needs.build-release-container.outputs.version }}"
+              spec:
+                containers:
+                - name: cs2-data-pipeline
+                  image: ghcr.io/${{ github.repository }}:${{ needs.build-release-container.outputs.version }}
+                  command: ["cs2-data-pipeline"]
+                  args: ["run"]
+                  resources:
+                    requests:
+                      memory: "1Gi"
+                      cpu: "500m"
+                    limits:
+                      memory: "2Gi"
+                      cpu: "1000m"
+                  env:
+                  - name: ENVIRONMENT
+                    value: "production"
+                  - name: VERSION
+                    value: "${{ needs.build-release-container.outputs.version }}"
+          EOF
+
+      - name: Dry-run deployment manifests
+        run: |
+          echo "Production manifests created successfully:"
+          echo "=== Namespace ==="
+          cat k8s-production/namespace.yaml
+          echo "=== Deployment ==="
+          cat k8s-production/deployment.yaml
+
+      # Note: Actual deployment would require K8s cluster access
+      # This step demonstrates the manifest creation for production deployment
+      - name: Production deployment ready
+        run: |
+          echo "✅ Production deployment manifests created"
+          echo "📦 Container image: ghcr.io/${{ github.repository }}:${{ needs.build-release-container.outputs.version }}"
+          echo "🚀 Ready for production deployment"

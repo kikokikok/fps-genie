@@ -1,0 +1,183 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fps-genie-app
+  namespace: fps-genie
+  labels:
+    app: fps-genie
+    component: data-pipeline
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fps-genie
+      component: data-pipeline
+  template:
+    metadata:
+      labels:
+        app: fps-genie
+        component: data-pipeline
+    spec:
+      initContainers:
+      - name: wait-for-postgres
+        image: postgres:15-alpine
+        command: ['sh', '-c']
+        args:
+          - |
+            until pg_isready -h postgres -p 5432 -U cs2_user; do
+              echo "Waiting for PostgreSQL..."
+              sleep 2
+            done
+            echo "PostgreSQL is ready!"
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: fps-genie-secrets
+              key: postgres-password
+      - name: wait-for-redis
+        image: redis:7-alpine
+        command: ['sh', '-c']
+        args:
+          - |
+            until redis-cli -h redis ping; do
+              echo "Waiting for Redis..."
+              sleep 2
+            done
+            echo "Redis is ready!"
+      - name: wait-for-qdrant
+        image: curlimages/curl:latest
+        command: ['sh', '-c']
+        args:
+          - |
+            until curl -f http://qdrant:6333/health; do
+              echo "Waiting for Qdrant..."
+              sleep 2
+            done
+            echo "Qdrant is ready!"
+      containers:
+      - name: data-pipeline
+        image: ghcr.io/kikokikok/fps-genie:latest
+        imagePullPolicy: Always
+        command: ["cs2-data-pipeline"]
+        args: ["run"]
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: fps-genie-config
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef:
+              name: fps-genie-config
+              key: REDIS_URL
+        - name: QDRANT_URL
+          valueFrom:
+            configMapKeyRef:
+              name: fps-genie-config
+              key: QDRANT_URL
+        - name: RUST_LOG
+          valueFrom:
+            configMapKeyRef:
+              name: fps-genie-config
+              key: RUST_LOG
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: fps-genie-config
+              key: ENVIRONMENT
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["cs2-data-pipeline", "--help"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command: ["cs2-data-pipeline", "--help"]
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: demo-storage
+          mountPath: /app/demos
+        - name: temp-storage
+          mountPath: /app/temp
+      volumes:
+      - name: demo-storage
+        emptyDir: {}
+      - name: temp-storage
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fps-genie-svc
+  namespace: fps-genie
+spec:
+  selector:
+    app: fps-genie
+    component: data-pipeline
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fps-genie-analyzer
+  namespace: fps-genie
+  labels:
+    app: fps-genie
+    component: analyzer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fps-genie
+      component: analyzer
+  template:
+    metadata:
+      labels:
+        app: fps-genie
+        component: analyzer
+    spec:
+      containers:
+      - name: analyzer
+        image: ghcr.io/kikokikok/fps-genie:latest
+        imagePullPolicy: Always
+        command: ["cs2-demo-analyzer"]
+        args: ["--help"]  # Change this to actual analyzer command
+        envFrom:
+        - configMapRef:
+            name: fps-genie-config
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: demo-storage
+          mountPath: /app/demos
+        - name: models-storage
+          mountPath: /app/models
+      volumes:
+      - name: demo-storage
+        emptyDir: {}
+      - name: models-storage
+        emptyDir: {}
