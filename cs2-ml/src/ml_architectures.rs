@@ -796,9 +796,9 @@ mod tests {
         let vs = VarBuilder::from_varmap(&varmap, DType::F32, &Device::Cpu);
         let attention = AttentionMechanism::new(64, 32, vs)?;
         
-        let input = Tensor::randn(0.0, 1.0, (1, 10, 64), &Device::Cpu)?;
+        let input = Tensor::zeros((1, 10, 64), DType::F32, &Device::Cpu)?;
         let output = attention.forward(&input)?;
-        assert_eq!(output.shape(), &[1, 10, 64]);
+        assert_eq!(output.shape().dims(), &[1, 10, 64]);
         Ok(())
     }
 
@@ -808,12 +808,12 @@ mod tests {
         let vs = VarBuilder::from_varmap(&varmap, DType::F32, &Device::Cpu);
         let lstm = LSTMCell::new(10, 20, vs)?;
         
-        let input = Tensor::randn(0.0, 1.0, (1, 10), &Device::Cpu)?;
+        let input = Tensor::zeros((1, 10), DType::F32, &Device::Cpu)?;
         let (hidden, cell) = lstm.init_state(1, &Device::Cpu)?;
         let (new_hidden, new_cell) = lstm.forward(&input, &hidden, &cell)?;
         
-        assert_eq!(new_hidden.shape(), &[1, 20]);
-        assert_eq!(new_cell.shape(), &[1, 20]);
+        assert_eq!(new_hidden.shape().dims(), &[1, 20]);
+        assert_eq!(new_cell.shape().dims(), &[1, 20]);
         Ok(())
     }
 
@@ -821,11 +821,11 @@ mod tests {
     fn test_player_style_classifier() -> Result<()> {
         let classifier = PlayerStyleClassifier::new(18, 6, 5, Device::Cpu)?;
         
-        let mechanics = Tensor::randn(0.0, 1.0, (1, 18), &Device::Cpu)?;
-        let context = Tensor::randn(0.0, 1.0, (1, 6), &Device::Cpu)?;
+        let mechanics = Tensor::zeros((1, 18), DType::F32, &Device::Cpu)?;
+        let context = Tensor::zeros((1, 6), DType::F32, &Device::Cpu)?;
         
         let predictions = classifier.forward(&mechanics, &context, false)?;
-        assert_eq!(predictions.shape(), &[1, 5]);
+        assert_eq!(predictions.shape().dims(), &[1, 5]);
         Ok(())
     }
 
@@ -833,11 +833,11 @@ mod tests {
     fn test_team_dynamics_transformer() -> Result<()> {
         let transformer = TeamDynamicsTransformer::new(16, 8, 4, Device::Cpu)?;
         
-        let spatial = Tensor::randn(0.0, 1.0, (1, 16), &Device::Cpu)?;
-        let temporal = Tensor::randn(0.0, 1.0, (1, 8), &Device::Cpu)?;
+        let spatial = Tensor::zeros((1, 16), DType::F32, &Device::Cpu)?;
+        let temporal = Tensor::zeros((1, 8), DType::F32, &Device::Cpu)?;
         
         let dynamics = transformer.forward(&spatial, &temporal, false)?;
-        assert_eq!(dynamics.shape(), &[1, 64]);
+        assert_eq!(dynamics.shape().dims(), &[1, 64]);
         Ok(())
     }
 
@@ -846,15 +846,15 @@ mod tests {
         let rnn = DecisionQualityRNN::new(10, 5, 32, Device::Cpu)?;
         
         let decision_sequence = vec![
-            Tensor::randn(0.0, 1.0, (1, 10), &Device::Cpu)?,
-            Tensor::randn(0.0, 1.0, (1, 10), &Device::Cpu)?,
-            Tensor::randn(0.0, 1.0, (1, 10), &Device::Cpu)?,
+            Tensor::zeros((1, 10), DType::F32, &Device::Cpu)?,
+            Tensor::zeros((1, 10), DType::F32, &Device::Cpu)?,
+            Tensor::zeros((1, 10), DType::F32, &Device::Cpu)?,
         ];
         
         let context_sequence = vec![
-            Tensor::randn(0.0, 1.0, (1, 5), &Device::Cpu)?,
-            Tensor::randn(0.0, 1.0, (1, 5), &Device::Cpu)?,
-            Tensor::randn(0.0, 1.0, (1, 5), &Device::Cpu)?,
+            Tensor::zeros((1, 5), DType::F32, &Device::Cpu)?,
+            Tensor::zeros((1, 5), DType::F32, &Device::Cpu)?,
+            Tensor::zeros((1, 5), DType::F32, &Device::Cpu)?,
         ];
         
         let quality_scores = rnn.forward(&decision_sequence, &context_sequence, false)?;
