@@ -5,14 +5,14 @@
 
 use winnow::prelude::*;
 use winnow::{
-    binary::{le_u32, le_u16, le_u8, length_take},
-    combinator::{preceded, terminated, repeat},
+    binary::{le_u32, le_u8},
     token::take,
-    Bytes,
+    error::ErrMode,
 };
 
+type WinnowResult<T> = std::result::Result<T, winnow::error::ErrMode<winnow::error::ContextError>>;
+
 use crate::common::{Error, Result, PerformanceMetrics};
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 /// Demo file header information
@@ -125,15 +125,14 @@ impl DemoParser {
         let start_time = std::time::Instant::now();
         
         // Parse the header using Winnow
-        let input = Bytes::new(data);
-        let (remaining, header) = demo_header_parser
-            .parse_peek(input)
+        let mut input = &data[..];
+        let header = demo_header_parser(&mut input)
             .map_err(|e| Error::Parse {
                 message: format!("Header parsing failed: {}", e),
                 position: self.position,
             })?;
             
-        self.position = data.len() - remaining.len();
+        self.position = data.len() - input.len();
         self.header = Some(header.clone());
         
         // Update performance metrics
@@ -151,17 +150,16 @@ impl DemoParser {
         
         let start_time = std::time::Instant::now();
         
-        let input = Bytes::new(&data[self.position..]);
-        let result = demo_frame_parser
-            .parse_peek(input)
+        let mut input = &data[self.position..];
+        let result = demo_frame_parser(&mut input)
             .map_err(|e| Error::Parse {
                 message: format!("Frame parsing failed: {}", e),
                 position: self.position,
             });
             
         match result {
-            Ok((remaining, frame)) => {
-                let bytes_consumed = input.len() - remaining.len();
+            Ok(frame) => {
+                let bytes_consumed = data[self.position..].len() - input.len();
                 self.position += bytes_consumed;
                 
                 // Update metrics
@@ -204,7 +202,7 @@ impl Default for DemoParser {
 }
 
 /// Winnow parser for demo file header
-fn demo_header_parser(input: &mut Bytes) -> PResult<DemoHeader> {
+fn demo_header_parser(input: &mut &[u8]) -> WinnowResult<DemoHeader> {
     // Demo file starts with "HL2DEMO\0" signature
     let _signature: &[u8] = b"HL2DEMO\0".parse_next(input)?;
     
@@ -239,11 +237,11 @@ fn demo_header_parser(input: &mut Bytes) -> PResult<DemoHeader> {
 }
 
 /// Winnow parser for demo frames
-fn demo_frame_parser(input: &mut Bytes) -> PResult<DemoFrame> {
+fn demo_frame_parser(input: &mut &[u8]) -> WinnowResult<DemoFrame> {
     // Read command type
     let cmd_byte: u8 = le_u8.parse_next(input)?;
     let command = DemoCommand::try_from(cmd_byte)
-        .map_err(|_| winnow::error::ErrMode::from_error_kind(input, winnow::error::ErrorKind::Verify))?;
+        .map_err(|_| ErrMode::Cut(winnow::error::ContextError::new()))?;
     
     // Read tick number
     let tick: u32 = le_u32.parse_next(input)?;
@@ -268,7 +266,7 @@ fn demo_frame_parser(input: &mut Bytes) -> PResult<DemoFrame> {
 }
 
 /// Parse null-terminated string
-fn null_terminated_string(input: &mut Bytes) -> PResult<String> {
+fn null_terminated_string(input: &mut &[u8]) -> WinnowResult<String> {
     let mut bytes = Vec::new();
     
     loop {
@@ -280,11 +278,11 @@ fn null_terminated_string(input: &mut Bytes) -> PResult<String> {
     }
     
     String::from_utf8(bytes)
-        .map_err(|_| winnow::error::ErrMode::from_error_kind(input, winnow::error::ErrorKind::Verify))
+        .map_err(|_| ErrMode::Cut(winnow::error::ContextError::new()))
 }
 
 /// Parse little-endian f32
-fn le_f32(input: &mut Bytes) -> PResult<f32> {
+fn le_f32(input: &mut &[u8]) -> WinnowResult<f32> {
     let bytes: &[u8] = take(4_usize).parse_next(input)?;
     Ok(f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]))
 }
@@ -303,7 +301,7 @@ mod tests {
     #[test]
     fn test_null_terminated_string_parser() {
         let data = b"hello\0world\0";
-        let mut input = Bytes::new(data);
+        let mut input = &data[..];
         
         let result = null_terminated_string(&mut input).unwrap();
         assert_eq!(result, "hello");

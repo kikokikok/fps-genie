@@ -17,11 +17,11 @@
 //!
 //! ## Usage
 //!
-//! ```rust
+//! ```rust,no_run
 //! use cs2_demo_parser_next::{DemoParser, DemoHeader};
 //! 
 //! let demo_data = std::fs::read("demo.dem")?;
-//! let parser = DemoParser::new();
+//! let mut parser = DemoParser::new();
 //! let header = parser.parse_header(&demo_data)?;
 //! println!("Demo: {} on {}", header.server_name, header.map_name);
 //! # Ok::<(), Box<dyn std::error::Error>>(())

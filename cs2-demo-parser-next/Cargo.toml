@@ -29,6 +29,7 @@ rayon = "1.11"
 # Protocol buffers (reuse from existing project)
 csgoproto = { path = "../csgoproto" }
 cs2-common = { path = "../cs2-common" }
+prost = "0.14"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
