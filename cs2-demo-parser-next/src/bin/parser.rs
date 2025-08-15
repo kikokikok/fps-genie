@@ -197,15 +197,22 @@ fn print_usage(program_name: &str) {
 
 fn display_header_info(header: &cs2_demo_parser_next::DemoHeader) {
     println!("🏷️  File format: {}", header.demo_file_stamp);
-    println!("🌐 Network protocol: {}", header.network_protocol);
-    println!("🖥️  Server: {}", header.server_name);
-    println!("👤 Client: {}", header.client_name);
-    println!("🗺️  Map: {}", header.map_name);
-    println!("📁 Game directory: {}", header.game_directory);
-    println!("⏱️  Playback time: {:.2} seconds", header.playback_time);
-    println!("🎯 Playback ticks: {}", header.playback_ticks);
-    println!("🎬 Playback frames: {}", header.playback_frames);
-    println!("✍️  Signon length: {} bytes", header.signon_length);
+    
+    if header.demo_file_stamp == "PBDEMS2" {
+        println!("✅ Valid CS2 demo file detected");
+        println!("📋 Note: CS2 uses protobuf format - full header parsing requires protobuf message decoding");
+        println!("📊 File length: {} bytes", header.signon_length);
+    } else {
+        println!("🌐 Network protocol: {}", header.network_protocol);
+        println!("🖥️  Server: {}", header.server_name);
+        println!("👤 Client: {}", header.client_name);
+        println!("🗺️  Map: {}", header.map_name);
+        println!("📁 Game directory: {}", header.game_directory);
+        println!("⏱️  Playback time: {:.2} seconds", header.playback_time);
+        println!("🎯 Playback ticks: {}", header.playback_ticks);
+        println!("🎬 Playback frames: {}", header.playback_frames);
+        println!("✍️  Signon length: {} bytes", header.signon_length);
+    }
 }
 
 fn quick_analysis(parser: &mut DemoParser, demo_data: &[u8], args: &CliArgs) -> Result<()> {

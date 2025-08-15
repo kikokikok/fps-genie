@@ -121,8 +121,18 @@ impl DemoParser {
     }
     
     /// Parse demo header using Winnow combinators
+    /// Note: CS2 demos use protobuf format, so this only parses the initial signature
+    /// Full header information requires parsing protobuf messages after the initial 16 bytes
     pub fn parse_header(&mut self, data: &[u8]) -> Result<DemoHeader> {
         let start_time = std::time::Instant::now();
+        
+        // Validate minimum file size
+        if data.len() < 16 {
+            return Err(Error::Parse {
+                message: "Demo file too small - must be at least 16 bytes".to_string(),
+                position: 0,
+            });
+        }
         
         // Parse the header using Winnow
         let mut input = &data[..];
@@ -203,36 +213,26 @@ impl Default for DemoParser {
 
 /// Winnow parser for demo file header
 fn demo_header_parser(input: &mut &[u8]) -> WinnowResult<DemoHeader> {
-    // Demo file starts with "HL2DEMO\0" signature
-    let _signature: &[u8] = b"HL2DEMO\0".parse_next(input)?;
+    // CS2 demos start with "PBDEMS2\0" signature (not HL2DEMO)
+    let _signature: &[u8] = b"PBDEMS2\0".parse_next(input)?;
     
-    // Demo file header protocol version
-    let demo_protocol: u32 = le_u32.parse_next(input)?;
-    let network_protocol: u32 = le_u32.parse_next(input)?;
+    // File length and unknown field (first 16 bytes total)
+    let file_length: u32 = le_u32.parse_next(input)?;
+    let _unknown_field: u32 = le_u32.parse_next(input)?;
     
-    // Server and client names (null-terminated strings)
-    let server_name = null_terminated_string.parse_next(input)?;
-    let client_name = null_terminated_string.parse_next(input)?;
-    let map_name = null_terminated_string.parse_next(input)?;
-    let game_directory = null_terminated_string.parse_next(input)?;
-    
-    // Playback time and frame info
-    let playback_time = le_f32.parse_next(input)?;
-    let playback_ticks: u32 = le_u32.parse_next(input)?;
-    let playback_frames: u32 = le_u32.parse_next(input)?;
-    let signon_length: u32 = le_u32.parse_next(input)?;
-    
+    // For now, create a minimal header with available information
+    // Real CS2 demos require parsing protobuf messages for full header info
     Ok(DemoHeader {
-        demo_file_stamp: format!("HL2DEMO (protocol {})", demo_protocol),
-        network_protocol,
-        server_name,
-        client_name,
-        map_name,
-        game_directory,
-        playback_time,
-        playback_ticks,
-        playback_frames,
-        signon_length,
+        demo_file_stamp: "PBDEMS2".to_string(),
+        network_protocol: 0, // Will be extracted from protobuf messages
+        server_name: "Unknown".to_string(),
+        client_name: "Unknown".to_string(),
+        map_name: "Unknown".to_string(),
+        game_directory: "csgo".to_string(),
+        playback_time: 0.0,
+        playback_ticks: 0,
+        playback_frames: 0,
+        signon_length: file_length,
     })
 }
 
@@ -308,6 +308,41 @@ mod tests {
         
         let result2 = null_terminated_string(&mut input).unwrap();
         assert_eq!(result2, "world");
+    }
+    
+    #[test]
+    fn test_cs2_demo_header_parsing() {
+        // Create a minimal CS2 demo with correct signature
+        let mut demo_data = Vec::new();
+        demo_data.extend_from_slice(b"PBDEMS2\0");  // CS2 signature
+        demo_data.extend_from_slice(&1000u32.to_le_bytes());  // File length
+        demo_data.extend_from_slice(&0u32.to_le_bytes());     // Unknown field
+        
+        let mut parser = DemoParser::new();
+        let result = parser.parse_header(&demo_data);
+        
+        assert!(result.is_ok(), "Should parse CS2 demo header");
+        let header = result.unwrap();
+        assert_eq!(header.demo_file_stamp, "PBDEMS2");
+        assert_eq!(header.signon_length, 1000);
+    }
+    
+    #[test]
+    fn test_invalid_demo_format() {
+        // Test with wrong signature
+        let demo_data = b"INVALID\0";
+        let mut parser = DemoParser::new();
+        let result = parser.parse_header(demo_data);
+        assert!(result.is_err(), "Should reject invalid demo format");
+    }
+    
+    #[test]
+    fn test_demo_too_small() {
+        // Test with file too small
+        let demo_data = b"PBDEMS2";  // Missing null terminator and fields
+        let mut parser = DemoParser::new();
+        let result = parser.parse_header(demo_data);
+        assert!(result.is_err(), "Should reject demo file that's too small");
     }
     
     #[test]
