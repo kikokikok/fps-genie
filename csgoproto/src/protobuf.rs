@@ -8978,24 +8978,28 @@ pub struct CMsgPlaceDecalEvent {
     pub normal: ::core::option::Option<CMsgVector>,
     #[prost(message, optional, tag = "3")]
     pub saxis: ::core::option::Option<CMsgVector>,
-    #[prost(int32, optional, tag = "4")]
-    pub boneindex: ::core::option::Option<i32>,
+    #[prost(uint32, optional, tag = "4")]
+    pub decalmaterialindex: ::core::option::Option<u32>,
     #[prost(uint32, optional, tag = "5")]
     pub flags: ::core::option::Option<u32>,
     #[prost(fixed32, optional, tag = "6")]
     pub color: ::core::option::Option<u32>,
-    #[prost(int32, optional, tag = "7")]
-    pub random_seed: ::core::option::Option<i32>,
-    #[prost(uint32, optional, tag = "8")]
-    pub decal_group_name: ::core::option::Option<u32>,
+    #[prost(float, optional, tag = "7")]
+    pub width: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "8")]
+    pub height: ::core::option::Option<f32>,
     #[prost(float, optional, tag = "9")]
-    pub size_override: ::core::option::Option<f32>,
-    #[prost(uint32, optional, tag = "10", default = "16777215")]
-    pub entityhandle: ::core::option::Option<u32>,
-    #[prost(uint64, optional, tag = "11")]
-    pub material_id: ::core::option::Option<u64>,
-    #[prost(uint32, optional, tag = "12")]
-    pub sequence_name: ::core::option::Option<u32>,
+    pub depth: ::core::option::Option<f32>,
+    #[prost(uint32, optional, tag = "10")]
+    pub entityhandleindex: ::core::option::Option<u32>,
+    #[prost(fixed32, optional, tag = "11")]
+    pub skeletoninstancehash: ::core::option::Option<u32>,
+    #[prost(int32, optional, tag = "12")]
+    pub boneindex: ::core::option::Option<i32>,
+    #[prost(bool, optional, tag = "13")]
+    pub translucenthit: ::core::option::Option<bool>,
+    #[prost(bool, optional, tag = "14")]
+    pub is_adjacent: ::core::option::Option<bool>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CMsgClearWorldDecalsEvent {
@@ -9008,11 +9012,13 @@ pub struct CMsgClearEntityDecalsEvent {
     pub flagstoclear: ::core::option::Option<u32>,
 }
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
-pub struct CMsgClearDecalsForEntityEvent {
+pub struct CMsgClearDecalsForSkeletonInstanceEvent {
     #[prost(uint32, optional, tag = "1")]
     pub flagstoclear: ::core::option::Option<u32>,
-    #[prost(uint32, optional, tag = "2", default = "16777215")]
-    pub entityhandle: ::core::option::Option<u32>,
+    #[prost(uint32, optional, tag = "2")]
+    pub entityhandleindex: ::core::option::Option<u32>,
+    #[prost(uint32, optional, tag = "3")]
+    pub skeletoninstancehash: ::core::option::Option<u32>,
 }
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CMsgSource1LegacyGameEventList {
@@ -9128,7 +9134,7 @@ pub enum EBaseGameEvents {
     GePlaceDecalEvent = 201,
     GeClearWorldDecalsEvent = 202,
     GeClearEntityDecalsEvent = 203,
-    GeClearDecalsForEntityEvent = 204,
+    GeClearDecalsForSkeletonInstanceEvent = 204,
     GeSource1LegacyGameEventList = 205,
     GeSource1LegacyListenEvents = 206,
     GeSource1LegacyGameEvent = 207,
@@ -9149,7 +9155,7 @@ impl EBaseGameEvents {
             Self::GePlaceDecalEvent => "GE_PlaceDecalEvent",
             Self::GeClearWorldDecalsEvent => "GE_ClearWorldDecalsEvent",
             Self::GeClearEntityDecalsEvent => "GE_ClearEntityDecalsEvent",
-            Self::GeClearDecalsForEntityEvent => "GE_ClearDecalsForEntityEvent",
+            Self::GeClearDecalsForSkeletonInstanceEvent => "GE_ClearDecalsForSkeletonInstanceEvent",
             Self::GeSource1LegacyGameEventList => "GE_Source1LegacyGameEventList",
             Self::GeSource1LegacyListenEvents => "GE_Source1LegacyListenEvents",
             Self::GeSource1LegacyGameEvent => "GE_Source1LegacyGameEvent",
@@ -9167,7 +9173,7 @@ impl EBaseGameEvents {
             "GE_PlaceDecalEvent" => Some(Self::GePlaceDecalEvent),
             "GE_ClearWorldDecalsEvent" => Some(Self::GeClearWorldDecalsEvent),
             "GE_ClearEntityDecalsEvent" => Some(Self::GeClearEntityDecalsEvent),
-            "GE_ClearDecalsForEntityEvent" => Some(Self::GeClearDecalsForEntityEvent),
+            "GE_ClearDecalsForSkeletonInstanceEvent" => Some(Self::GeClearDecalsForSkeletonInstanceEvent),
             "GE_Source1LegacyGameEventList" => Some(Self::GeSource1LegacyGameEventList),
             "GE_Source1LegacyListenEvents" => Some(Self::GeSource1LegacyListenEvents),
             "GE_Source1LegacyGameEvent" => Some(Self::GeSource1LegacyGameEvent),
