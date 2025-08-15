@@ -1,0 +1,66 @@
+[package]
+name = "cs2-demo-parser-next"
+version = "0.1.0"
+edition = "2021"
+description = "Next-generation CS2 demo parser using Winnow and agentic mesh architecture"
+license = "MIT"
+authors = ["kikokikok <1577981+kikokikok@users.noreply.github.com>"]
+
+[dependencies]
+# Core parsing with Winnow
+winnow = { version = "0.7", features = ["simd"] }
+bytes = "1.10"
+bitvec = "1.0"
+
+# Utility libraries
+anyhow = "1.0"
+thiserror = "2.0"
+itertools = "0.14"
+ahash = "0.8"
+
+# Serialization and data structures
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Performance and memory management
+memmap2 = "0.9"
+rayon = "1.11"
+
+# Protocol buffers (reuse from existing project)
+csgoproto = { path = "../csgoproto" }
+cs2-common = { path = "../cs2-common" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+tempfile = "3.20"
+proptest = "1.5"
+test-case = "3.3"
+
+[[bench]]
+name = "parser_benchmarks"
+harness = false
+
+[features]
+default = ["tracing"]
+tracing = ["dep:tracing"]
+
+[dependencies.tracing]
+version = "0.1"
+optional = true
+
+[lib]
+name = "cs2_demo_parser_next"
+path = "src/lib.rs"
+
+[[bin]]
+name = "parser-next"
+path = "src/bin/parser.rs"
+
+[profile.release]
+debug = true
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+debug = true

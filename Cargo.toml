@@ -4,6 +4,7 @@ members = [
     "cs2-common",
     "cs2-demo-analyzer",
     "cs2-demo-parser",
+    "cs2-demo-parser-next",
     "cs2-ml",
     "cs2-data-pipeline",
     "cs2-integration-tests",
