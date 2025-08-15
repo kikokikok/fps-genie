@@ -292,8 +292,14 @@ impl PlayerMechanicsExtractor {
             features.air_strafe_control = total_air_strafe_quality / air_time_ticks as f32;
         }
 
-        // Calculate position transition smoothness
-        features.position_transition_smoothness = self.calculate_movement_smoothness(vectors);
+        // Calculate position transition smoothness using velocity changes
+        if vectors.len() > 1 {
+            // Normalize velocity changes - smoother movement has lower total velocity changes
+            let avg_velocity_change = total_velocity_changes / (vectors.len() - 1) as f32;
+            features.position_transition_smoothness = 1.0 / (1.0 + avg_velocity_change / 100.0);
+        } else {
+            features.position_transition_smoothness = self.calculate_movement_smoothness(vectors);
+        }
 
         // Usage patterns (simplified)
         features.crouch_usage_pattern = 0.1; // Placeholder

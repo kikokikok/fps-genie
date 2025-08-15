@@ -1022,8 +1022,6 @@ impl TemporalContextExtractor {
         }
 
         let mut total_distance = 0.0;
-        let mut optimal_distance = 0.0;
-
         for window in vectors.windows(2) {
             let actual_dist = ((window[1].pos_x - window[0].pos_x).powi(2)
                 + (window[1].pos_y - window[0].pos_y).powi(2))
@@ -1034,7 +1032,8 @@ impl TemporalContextExtractor {
         // Calculate direct distance from start to end
         let start = &vectors[0];
         let end = &vectors[vectors.len() - 1];
-        optimal_distance =
+
+        let optimal_distance =
             ((end.pos_x - start.pos_x).powi(2) + (end.pos_y - start.pos_y).powi(2)).sqrt();
 
         if total_distance > 0.0 {

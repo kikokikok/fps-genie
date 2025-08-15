@@ -182,13 +182,11 @@ async fn main() -> Result<()> {
                 .await?;
 
             if let Some(row) = size_row {
-                if let Ok(size) = row.try_get::<Option<i64>, _>(0) {
-                    if let Some(size) = size {
-                        println!(
-                            "Processed demo data: {:.2} GB",
-                            size as f64 / 1024.0 / 1024.0 / 1024.0
-                        );
-                    }
+                if let Ok(Some(size)) = row.try_get::<Option<i64>, _>(0) {
+                    println!(
+                        "Processed demo data: {:.2} GB",
+                        size as f64 / 1024.0 / 1024.0 / 1024.0
+                    );
                 }
             }
 

@@ -192,6 +192,9 @@ temp/
 *.bak
 *.orig
 
+# CI/CD backup files
+.github/workflows/*-original.yml.bak
+
 ### Database and Development Tools
 # Database files
 *.db

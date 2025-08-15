@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fps-genie
+  labels:
+    name: fps-genie
+    environment: development
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fps-genie-config
+  namespace: fps-genie
+data:
+  DATABASE_URL: "postgresql://cs2_user:cs2_password@postgres:5432/cs2_analysis"
+  REDIS_URL: "redis://redis:6379"
+  QDRANT_URL: "http://qdrant:6333"
+  RUST_LOG: "info"
+  ENVIRONMENT: "kubernetes"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fps-genie-secrets
+  namespace: fps-genie
+type: Opaque
+data:
+  # Default passwords (base64 encoded) - change for production
+  postgres-password: Y3MyX3Bhc3N3b3Jk  # cs2_password
+  qdrant-api-key: MTIzNA==  # 1234

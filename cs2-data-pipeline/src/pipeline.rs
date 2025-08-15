@@ -715,8 +715,6 @@ impl DemoProcessor {
 
                 // Movement/aim summaries
                 let mut path_len = 0.0_f32;
-                #[allow(unused_variables)]
-                let mut avg_speed = 0.0_f32;
                 let mut max_speed = 0.0_f32;
                 let mut time_scoped_ticks = 0u32;
                 let mut time_walking_ticks = 0u32;
@@ -765,7 +763,7 @@ impl DemoProcessor {
                     last_yaw = Some(s.yaw);
                     last_pitch = Some(s.pitch);
                 }
-                avg_speed = speed_sum / (window.len() as f32);
+                let avg_speed = speed_sum / (window.len() as f32);
 
                 let duration_ticks = (m.end_tick - m.start_tick).max(1) as f32;
                 let duration_seconds = duration_ticks / TICK_RATE;
